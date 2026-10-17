@@ -1,0 +1,22 @@
+[
+  {
+    "id": "ian-central-d",
+    "name": "이안센트럴D",
+    "region": "대구 동구 신암동",
+    "lawd_cd": "27140",
+    "umd": "신암동",
+    "keywords": ["이안센트럴"],
+    "completed": "2021-09",
+    "naver_complex_id": ""
+  },
+  {
+    "id": "thesharp-libiter-2",
+    "name": "더샵리비테르2차",
+    "region": "대구 중구 대봉동",
+    "lawd_cd": "27110",
+    "umd": "대봉동",
+    "keywords": ["리비테르2"],
+    "completed": "2022-03",
+    "naver_complex_id": ""
+  }
+]
