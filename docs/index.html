@@ -419,7 +419,7 @@ function renderHistory() {
   const all = (DATA.trades[hist.key] || []).filter(r => r[1] === hist.kind).slice().reverse();
   const sale = hist.kind === "매매";
   document.getElementById("hist-sub").textContent =
-    `전용 84㎡ ${hist.kind} ${all.length}건` + (sale ? " · 등기일이 비어 있으면 아직 등기 전" : "");
+    `전용 84㎡ ${hist.kind} ${all.length}건` + (sale ? " · 동·등기일은 등기 후 공개" : "");
   document.getElementById("hist-kind").innerHTML = ["매매", "전세"].map(k =>
     `<button data-k="${k}" aria-pressed="${hist.kind === k}">${k}</button>`).join("");
   document.querySelectorAll("#hist-kind button").forEach(b => b.onclick = () => { hist.kind = b.dataset.k; renderHistory(); });
@@ -428,7 +428,7 @@ function renderHistory() {
     <tbody>${all.map(r => `<tr class="${r[5] ? "cancel" : ""}">
       <td>${shortDate(r[0])}</td>
       ${sale ? `<td>${shortDate(r[7]) || '<span class="sub">-</span>'}</td>` : ""}
-      <td>${r[6] ? esc(r[6]) : '<span class="sub">-</span>'}</td>
+      <td>${r[6] ? esc(r[6].replace(/동$/, "")) + "동" : '<span class="sub">-</span>'}</td>
       <td>${r[3]}</td>
       <td class="price">${fmtWon(r[2])}${r[5] ? '<span class="tag">해제</span>' : ""}${r[8] ? '<span class="tag">직거래</span>' : ""}</td>
     </tr>`).join("")}</tbody>`
