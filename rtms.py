@@ -41,11 +41,15 @@ class Complex:
     naver_complex_id: str = ""
     # 네이버 부동산에 단지명이 다르게 등록된 경우의 검색어 (예: "이안센트럴D(주상복합)")
     naver_query: str = ""
+    # 네이버 부동산에서 필터를 걸어 둔 화면의 주소를 그대로 넣으면 버튼이 그 화면으로 바로 열린다
+    naver_link: str = ""
     # 비교 단지. [{"name": "더샵디어엘로", "lawd_cd": "27140", "umd": "신천동", "keywords": ["디어엘로"]}, ...]
     compare: list[dict] = field(default_factory=list)
 
     @property
     def naver_url(self) -> str:
+        if self.naver_link:
+            return self.naver_link
         if self.naver_complex_id:
             return f"https://new.land.naver.com/complexes/{self.naver_complex_id}"
         return f"https://m.land.naver.com/search/result/{self.naver_query or self.name}"
