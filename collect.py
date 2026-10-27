@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -29,7 +30,9 @@ AREA_MIN, AREA_MAX = 83.0, 86.0
 
 
 def row_of(kind: str, it: dict) -> list | None:
-    """API item → [거래일, 구분, 금액(만원), 층, 전용면적, 해제여부]. 84㎡ 매매/전세가 아니면 None."""
+    """API item → [계약일, 구분, 금액(만원), 층, 전용면적, 해제여부, 동, 등기일, 직거래여부].
+
+    84㎡ 매매/전세가 아니면 None. 동·등기일은 매매에만 있고, 등기일은 등기 후에야 채워진다."""
     area = _num(it.get("excluUseAr"))
     if area is None or not AREA_MIN <= area < AREA_MAX:
         return None
@@ -43,7 +46,14 @@ def row_of(kind: str, it: dict) -> list | None:
     if not (y and price):
         return None
     return [f"{y}-{m:02d}-{max(d, 1):02d}", kind, int(price), int(_num(it.get("floor")) or 0), area,
-            bool((it.get("cdealType") or "").strip())]
+            bool((it.get("cdealType") or "").strip()), (it.get("aptDong") or "").strip(),
+            rgst_date(it.get("rgstDate")), (it.get("dealingGbn") or "").strip() == "직거래"]
+
+
+def rgst_date(text: str | None) -> str:
+    """API 등기일자('24.05.20')를 '2024-05-20'으로. 없으면 빈 문자열."""
+    m = re.fullmatch(r"(\d{2})\.(\d{1,2})\.(\d{1,2})", (text or "").strip())
+    return f"20{m[1]}-{int(m[2]):02d}-{int(m[3]):02d}" if m else ""
 
 
 def complex_key(lawd_cd: str, umd: str, apt: str) -> str:
@@ -105,11 +115,12 @@ def diff_new(old: dict, new: dict) -> list[dict]:
     for key, rows in new["trades"].items():
         if key not in old["trades"]:
             continue  # 비교 단지를 새로 추가했을 때 과거 거래 전체를 알림하지 않는다
-        seen = Counter(tuple(r) for r in old["trades"].get(key, []))
+        # 등기일은 나중에 채워지므로 앞 6개 항목(계약일~해제여부)만으로 같은 거래인지 본다
+        seen = Counter(tuple(r[:6]) for r in old["trades"].get(key, []))
         for r in rows:
             if r[1] in skip_kinds:
                 continue
-            t = tuple(r)
+            t = tuple(r[:6])
             if seen[t]:
                 seen[t] -= 1
                 continue

@@ -126,6 +126,24 @@ tbody tr.hi { background: var(--own-wash); }
 .badge { font-size: 11px; border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; margin-left: 4px; color: var(--ink-2); }
 .badge.own { color: var(--own); border-color: var(--own); }
 .empty { color: var(--muted); font-size: 14px; padding: 12px 0; }
+.btns { display: flex; flex-wrap: wrap; gap: 6px; }
+button.btn { font: inherit; font-size: 14px; color: var(--own); background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+button.mini { font: inherit; font-size: 12px; color: var(--own); background: none; border: 1px solid var(--border); border-radius: 6px; padding: 1px 7px; margin-top: 4px; cursor: pointer; }
+dialog#hist { width: min(560px, 100vw); max-width: 100vw; max-height: 88vh; margin: auto auto 0; padding: 0; border: 1px solid var(--border);
+  border-radius: 16px 16px 0 0; background: var(--surface); color: var(--ink); }
+@media (min-width: 640px) { dialog#hist { margin: auto; border-radius: 16px; } }
+dialog#hist::backdrop { background: rgba(0,0,0,0.4); }
+.hist-head { position: sticky; top: 0; background: var(--surface); padding: 16px 16px 8px; border-bottom: 1px solid var(--grid); z-index: 1; }
+.hist-head .top { display: flex; justify-content: space-between; align-items: start; gap: 8px; margin-bottom: 10px; }
+.hist-head h3 { margin: 0; font-size: 17px; }
+.close { font: inherit; font-size: 20px; line-height: 1; background: none; border: 0; color: var(--ink-2); cursor: pointer; padding: 2px 6px; }
+.hist-body { padding: 0 16px 16px; }
+.hist-body table { font-size: 13px; }
+.hist-body td, .hist-body th { padding: 7px 4px; }
+.hist-body th:first-child, .hist-body td:first-child { min-width: 0; }
+tr.cancel td { color: var(--muted); }
+tr.cancel td.price { text-decoration: line-through; }
+.tag { font-size: 11px; color: var(--ink-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; margin-left: 3px; white-space: nowrap; }
 .foot { color: var(--muted); font-size: 12px; margin-top: 24px; }
 </style>
 </head>
@@ -142,6 +160,14 @@ tbody tr.hi { background: var(--own-wash); }
     실거래는 계약 후 최대 30일 안에 신고되므로 최근 한두 달은 건수가 적을 수 있습니다.
   </p>
 </main>
+<dialog id="hist" aria-labelledby="hist-title">
+  <div class="hist-head">
+    <div class="top"><div><h3 id="hist-title"></h3><div class="sub" id="hist-sub"></div></div>
+      <button class="close" aria-label="닫기" id="hist-close">✕</button></div>
+    <div class="seg" role="group" aria-label="거래 구분" id="hist-kind"></div>
+  </div>
+  <div class="hist-body"><table id="hist-table"></table></div>
+</dialog>
 <script>
 const params = new URLSearchParams(location.search);
 const DATA_URL = params.get("data") || "data/market.json";
@@ -228,7 +254,8 @@ function render() {
     <section class="card">
       <div class="title-row">
         <div><h2>${esc(g.name)}</h2><div class="sub">${esc(g.region)}${g.completed ? ` · ${esc(g.completed)} 준공` : ""} · 전용 84㎡</div></div>
-        <a class="btn" href="${esc(g.naver_url)}" target="_blank" rel="noopener">네이버 부동산 호가 보기 ↗</a>
+        <div class="btns"><button class="btn" data-hist="${esc(own.key)}">실거래 내역</button>
+          <a class="btn" href="${esc(g.naver_url)}" target="_blank" rel="noopener">네이버 부동산 호가 보기 ↗</a></div>
       </div>
       <div class="tiles">
         <div class="tile"><div class="label">최근 매매</div><div class="value">${fmtWon(sale.last?.[2])}</div>
@@ -265,6 +292,7 @@ function render() {
         : `<div class="empty">아직 없습니다. 매일 아침 수집할 때 새로 신고된 거래가 있으면 여기에 쌓이고 GitHub 알림으로도 보내 드립니다.</div>`}
     </section>`;
 
+  bindHistButtons(document.querySelector(".title-row"));
   document.querySelectorAll("[data-kind]").forEach(b => b.onclick = () => { state.kind = b.dataset.kind; render(); });
   document.querySelectorAll("[data-years]").forEach(b => b.onclick = () => { state.years = +b.dataset.years; render(); });
   renderTable(g);
@@ -277,13 +305,15 @@ function renderTable(g) {
     <thead><tr><th>단지</th><th>시세<div class="sub">3개월 중앙값</div></th><th>직전 3개월<div class="sub">대비</div></th><th class="col-n">1년 전<div class="sub">대비</div></th><th>최근 거래</th><th class="col-n">3개월<div class="sub">거래</div></th></tr></thead>
     <tbody>${rows.map(({ c, s }) => `
       <tr data-key="${esc(c.key)}" class="${c.own ? "own" : ""} ${state.hi === c.key ? "hi" : ""}">
-        <td>${esc(c.name)}<div class="sub">${esc(c.umd)}</div></td>
+        <td>${esc(c.name)}<div class="sub">${esc(c.umd)}</div>${(DATA.trades[c.key] || []).length ? `<button class="mini" data-hist="${esc(c.key)}">실거래 내역</button>` : ""}</td>
         ${s.rows.length ? `<td>${fmtWon(s.recent)}</td>
         <td>${deltaHtml(s.change3m) || "-"}</td>
         <td class="col-n">${deltaHtml(s.change1y) || "-"}</td>
         <td>${s.last ? `${fmtWon(s.last[2])}<div class="sub">${s.last[0].slice(2).replaceAll("-", ".")}</div>` : "-"}</td>
         <td class="col-n">${s.count3m}건</td>` : `<td colspan="5" class="sub" style="text-align:left;white-space:normal">84㎡ ${state.kind} 실거래 없음. 신축은 등기 전까지 분양권·입주권 거래로 신고되어 아직 잡히지 않을 수 있습니다.</td>`}</tr>`).join("")}</tbody>`;
-  document.querySelectorAll("#cmp tbody tr").forEach(tr => tr.onclick = () => {
+  bindHistButtons(document.getElementById("cmp"));
+  document.querySelectorAll("#cmp tbody tr").forEach(tr => tr.onclick = e => {
+    if (e.target.closest("[data-hist]")) return;
     const k = tr.dataset.key;
     state.hi = state.hi === k || g.complexes.find(c => c.key === k).own ? null : k;
     renderTable(g); renderChart(g);
@@ -364,6 +394,51 @@ function renderChart(g) {
   // 터치는 손을 떼도 툴팁을 남겨 두고, 그래프 밖을 누르면 닫는다
   hit.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") hide(); });
   hideTip = hide;
+}
+
+// ---------- 단지별 실거래 내역 ----------
+const hist = { key: null, kind: "매매" };
+const shortDate = d => d ? d.slice(2).replaceAll("-", ".") : "";
+
+function bindHistButtons(root) {
+  root.querySelectorAll("[data-hist]").forEach(b => b.onclick = () => openHistory(b.dataset.hist));
+}
+
+function openHistory(key) {
+  hist.key = key; hist.kind = state.kind;
+  const c = DATA.groups.flatMap(g => g.complexes).find(c => c.key === key);
+  document.getElementById("hist-title").textContent = c.name + (c.own ? " (보유)" : "");
+  renderHistory();
+  const dlg = document.getElementById("hist");
+  dlg.showModal();
+  dlg.querySelector(".hist-body").scrollTop = 0;
+}
+
+function renderHistory() {
+  // 해제된 거래도 취소선으로 함께 보여 준다
+  const all = (DATA.trades[hist.key] || []).filter(r => r[1] === hist.kind).slice().reverse();
+  const sale = hist.kind === "매매";
+  document.getElementById("hist-sub").textContent =
+    `전용 84㎡ ${hist.kind} ${all.length}건` + (sale ? " · 등기일이 비어 있으면 아직 등기 전" : "");
+  document.getElementById("hist-kind").innerHTML = ["매매", "전세"].map(k =>
+    `<button data-k="${k}" aria-pressed="${hist.kind === k}">${k}</button>`).join("");
+  document.querySelectorAll("#hist-kind button").forEach(b => b.onclick = () => { hist.kind = b.dataset.k; renderHistory(); });
+  document.getElementById("hist-table").innerHTML = all.length ? `
+    <thead><tr><th>계약일</th>${sale ? "<th>등기일</th>" : ""}<th>동</th><th>층</th><th>가격</th></tr></thead>
+    <tbody>${all.map(r => `<tr class="${r[5] ? "cancel" : ""}">
+      <td>${shortDate(r[0])}</td>
+      ${sale ? `<td>${shortDate(r[7]) || '<span class="sub">-</span>'}</td>` : ""}
+      <td>${r[6] ? esc(r[6]) : '<span class="sub">-</span>'}</td>
+      <td>${r[3]}</td>
+      <td class="price">${fmtWon(r[2])}${r[5] ? '<span class="tag">해제</span>' : ""}${r[8] ? '<span class="tag">직거래</span>' : ""}</td>
+    </tr>`).join("")}</tbody>`
+    : `<tbody><tr><td class="empty">${hist.kind} 거래가 없습니다.</td></tr></tbody>`;
+}
+
+{
+  const dlg = document.getElementById("hist");
+  document.getElementById("hist-close").onclick = () => dlg.close();
+  dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });  // 바깥(배경) 누르면 닫기
 }
 
 function renderTabs() {

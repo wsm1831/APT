@@ -22,7 +22,9 @@ OWN = Complex("ian", "이안센트럴D", "대구 동구 신암동", "27140", "�
 
 
 def test_row_of_filters_area_and_wolse():
-    assert row_of("매매", item("A", "신암동", "70,000")) == ["2026-08-08", "매매", 70000, 10, 84.97, False]
+    assert row_of("매매", item("A", "신암동", "70,000")) == ["2026-08-08", "매매", 70000, 10, 84.97, False, "", "", False]
+    full = {**item("A", "신암동", "70,000"), "aptDong": "110", "rgstDate": "26.09.15", "dealingGbn": "직거래"}
+    assert row_of("매매", full)[6:] == ["110", "2026-09-15", True]
     assert row_of("매매", item("A", "신암동", "50,000", area="59.9")) is None
     rent = {"aptNm": "A", "umdNm": "신암동", "deposit": "40,000", "monthlyRent": "0", "dealYear": "2026",
             "dealMonth": "9", "dealDay": "1", "excluUseAr": "84.9", "floor": "3"}
@@ -84,3 +86,12 @@ def test_diff_new_ignores_kind_first_collected():
     new = build(FakeClient({("27140", "매매"): sale + [item("이안센트럴D", "신암동", "77,000", ym=(2026, 10, 1))],
                             ("27140", "전월세"): rent}), [OWN], 60)
     assert [(e["kind"], e["price"]) for e in diff_new(old, new)] == [("매매", 77000)]
+
+
+def test_diff_new_ignores_late_registration_date():
+    old = build(FakeClient({("27140", "매매"): [item("이안센트럴D", "신암동", "76,000")]}), [OWN], 60)
+    for rows in old["trades"].values():
+        for r in rows:
+            del r[6:]  # 동·등기일을 받기 전 형식
+    new = build(FakeClient({("27140", "매매"): [{**item("이안센트럴D", "신암동", "76,000"), "aptDong": "101", "rgstDate": "26.10.01"}]}), [OWN], 60)
+    assert diff_new(old, new) == []
