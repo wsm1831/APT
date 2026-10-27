@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: write
-  issues: write
 
 concurrency:
   group: collect
@@ -39,7 +38,6 @@ jobs:
       - name: 수집
         env:
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
-          DASHBOARD_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
         run: python collect.py
 
       - name: 변경 사항 커밋
@@ -53,13 +51,3 @@ jobs:
             git commit -m "실거래가 갱신 $(TZ=Asia/Seoul date +%F)"
             git push
           fi
-
-      # 새 거래가 있으면 이슈를 만들어 GitHub 알림(앱, 메일)으로 받는다. 기록만 남기고 바로 닫는다.
-      - name: 새 거래 알림
-        if: hashFiles('data/new_trades.md') != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          printf '\n@%s\n' "${{ github.repository_owner }}" >> data/new_trades.md
-          url=$(gh issue create --title "[실거래] $(TZ=Asia/Seoul date +%F) 새 거래" --body-file data/new_trades.md)
-          gh issue close "$url"

@@ -2,4 +2,3 @@ __pycache__/
 .venv/
 data/*.sqlite
 .streamlit/secrets.toml
-data/new_trades.md

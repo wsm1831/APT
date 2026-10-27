@@ -7,7 +7,7 @@
 `collect.py`가 GitHub Actions에서 매일 오전 7시경 실행되어 기준 단지와 비교 단지의 **전용 84㎡ 매매·전세 실거래**를 모읍니다.
 
 - 결과: `docs/data/market.json` → 대시보드 `docs/index.html`(GitHub Pages)에서 확인
-- 새로 신고된 거래가 있으면 이슈를 만들어 GitHub 알림(앱·메일)을 보냅니다
+- 새로 신고된 거래는 대시보드의 '새로 신고된 거래' 목록에 쌓입니다
 - 인증키: 저장소 Settings → Secrets and variables → Actions에 `DATA_GO_KR_KEY`
 - 대시보드 켜기: Settings → Pages → Branch를 `claude/apt-price-mvp`, 폴더 `/docs`로 저장
 - 비교 단지: `complexes.json`의 `compare`에 직접 지정 (단지명이 실거래 자료와 안 맞으면 Actions 로그에 같은 동 단지명 목록이 경고로 나옵니다)
@@ -52,7 +52,7 @@ streamlit run app.py
 
 - `rtms.py`: API 호출, XML 파싱, SQLite 캐시, 단지 필터
 - `app.py`: Streamlit 화면 (단지 상세, 단지 비교)
-- `collect.py`, `.github/workflows/collect.yml`: 매일 자동 수집과 새 거래 알림
+- `collect.py`, `.github/workflows/collect.yml`: 매일 자동 수집
 - `docs/index.html`: 휴대폰용 정적 대시보드
 - `sample_data.py`: 인증키 없을 때 쓰는 합성 데이터
 - `tests/`: 파서와 필터 테스트 (`python -m pytest`)

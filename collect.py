@@ -2,7 +2,7 @@
 
 GitHub Actions에서 매일 실행된다. 인증키는 환경변수 DATA_GO_KR_KEY(또는 RTMS_SERVICE_KEY).
 
-    python collect.py                 # docs/data/market.json 갱신, 새 거래는 data/new_trades.md에 기록
+    python collect.py                 # docs/data/market.json 갱신 (새로 신고된 거래는 대시보드 목록에 쌓인다)
     python collect.py --months 24     # 수집 기간 조정
 """
 from __future__ import annotations
@@ -22,7 +22,6 @@ from rtms import ApiError, Complex, RtmsClient, _norm, _num, load_complexes, mat
 
 ROOT = Path(__file__).parent
 OUT = ROOT / "docs" / "data" / "market.json"
-ALERT = ROOT / "data" / "new_trades.md"
 KST = timezone(timedelta(hours=9))
 
 # 실거래 자료의 전용면적은 84.97, 84.357처럼 들어오므로 범위로 '84㎡ 타입'을 정한다.
@@ -106,15 +105,15 @@ def build(client: RtmsClient, owned: list[Complex], months: int) -> dict:
 def diff_new(old: dict, new: dict) -> list[dict]:
     """이전 실행에 없던 거래(해제 신고 포함)를 찾는다."""
     if not old.get("trades"):
-        return []  # 첫 실행이면 전부 새 거래라 알림하지 않는다
+        return []  # 첫 실행이면 전부 새 거래라 목록에 넣지 않는다
     names = {c["key"]: c["name"] for g in new["groups"] for c in g["complexes"]}
     own = {c["key"] for g in new["groups"] for c in g["complexes"] if c["own"]}
-    # 이전 실행에서 못 받은 구분(예: 전월세 API 신청 전의 전세)은 과거 거래 전체가 새로 들어오므로 알림하지 않는다
+    # 이전 실행에서 못 받은 구분(예: 전월세 API 신청 전의 전세)은 과거 거래 전체가 새로 들어오므로 새 거래로 치지 않는다
     skip_kinds = set(old.get("missing", [])) - set(new.get("missing", []))
     out = []
     for key, rows in new["trades"].items():
         if key not in old["trades"]:
-            continue  # 비교 단지를 새로 추가했을 때 과거 거래 전체를 알림하지 않는다
+            continue  # 비교 단지를 새로 추가했을 때 과거 거래 전체를 새 거래로 치지 않는다
         # 등기일은 나중에 채워지므로 앞 6개 항목(계약일~해제여부)만으로 같은 거래인지 본다
         seen = Counter(tuple(r[:6]) for r in old["trades"].get(key, []))
         for r in rows:
@@ -127,22 +126,6 @@ def diff_new(old: dict, new: dict) -> list[dict]:
             out.append({"key": key, "name": names[key], "own": key in own, "date": r[0], "kind": r[1],
                         "price": r[2], "floor": r[3], "area": r[4], "cancelled": r[5]})
     return sorted(out, key=lambda e: (not e["own"], e["name"], e["date"]))
-
-
-def fmt_won(manwon: int) -> str:
-    eok, rest = divmod(int(manwon), 10000)
-    return f"{eok}억 {rest:,}" if eok and rest else f"{eok}억" if eok else f"{rest:,}만"
-
-
-def alert_markdown(events: list[dict], dashboard_url: str) -> str:
-    lines = [f"새로 신고된 84㎡ 실거래 {len(events)}건입니다.", ""]
-    lines += ["| 단지 | 구분 | 거래일 | 금액 | 층 | 비고 |", "|---|---|---|---|---|---|"]
-    for e in events:
-        name = f"**{e['name']}**" if e["own"] else e["name"]
-        lines.append(f"| {name} | {e['kind']} | {e['date']} | {fmt_won(e['price'])} | {e['floor']} | {'해제' if e['cancelled'] else ''} |")
-    if dashboard_url:
-        lines += ["", f"대시보드: {dashboard_url}"]
-    return "\n".join(lines) + "\n"
 
 
 def main() -> int:
@@ -170,11 +153,6 @@ def main() -> int:
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-
-    ALERT.unlink(missing_ok=True)
-    if events:
-        ALERT.parent.mkdir(parents=True, exist_ok=True)
-        ALERT.write_text(alert_markdown(events, os.environ.get("DASHBOARD_URL", "")), encoding="utf-8")
 
     for g in data["groups"]:
         print(f"[{g['name']}] " + ", ".join(f"{c['name']}({len(data['trades'][c['key']])})" for c in g["complexes"]))
