@@ -129,7 +129,8 @@ tbody tr.hi { background: var(--own-wash); }
 .btns { display: flex; flex-wrap: wrap; gap: 6px; }
 button.btn { font: inherit; font-size: 14px; color: var(--own); background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
 button.mini { font: inherit; font-size: 12px; color: var(--own); background: none; border: 1px solid var(--border); border-radius: 6px; padding: 1px 7px; margin-top: 4px; cursor: pointer; }
-dialog#hist { width: min(560px, 100vw); max-width: 100vw; max-height: 88vh; margin: auto auto 0; padding: 0; border: 1px solid var(--border);
+dialog#hist { width: min(560px, 100vw); max-width: 100vw; max-height: 88vh; height: 88vh;  /* 필터로 행 수가 바뀌어도 창 높이 고정 */
+  margin: auto auto 0; padding: 0; border: 1px solid var(--border);
   border-radius: 16px 16px 0 0; background: var(--surface); color: var(--ink); }
 @media (min-width: 640px) { dialog#hist { margin: auto; border-radius: 16px; } }
 dialog#hist::backdrop { background: rgba(0,0,0,0.4); }
@@ -141,11 +142,21 @@ dialog#hist::backdrop { background: rgba(0,0,0,0.4); }
 .hist-body table { font-size: 13px; }
 .hist-body td, .hist-body th { padding: 7px 4px; }
 .hist-body th:first-child, .hist-body td:first-child { min-width: 0; }
-#hist-filters .chips { margin-top: 8px; overflow-x: auto; scrollbar-width: none; }
-#hist-filters .chips::-webkit-scrollbar { display: none; }
-#hist-filters .chips button { flex: none; }
-#hist-filters .chips button .sub { font-size: 11px; }
-#hist-filters .chips button[aria-pressed="true"] .sub { color: inherit; opacity: .75; }
+.hist-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.divider { width: 1px; height: 20px; background: var(--axis); margin: 0 4px; }
+.dd { position: relative; }
+.dd > button { font: inherit; font-size: 13px; padding: 4px 10px 4px 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+.dd > button.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
+.dd > button::after { content: "▾"; margin-left: 4px; font-size: 11px; }
+.dd-menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 3; min-width: 150px; max-height: 50vh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); padding: 4px; }
+.dd-menu[hidden] { display: none; }
+.dd-menu button { display: flex; justify-content: space-between; gap: 12px; width: 100%; font: inherit; font-size: 14px; text-align: left;
+  background: none; border: 0; border-radius: 6px; padding: 8px 10px; color: var(--ink); cursor: pointer; white-space: nowrap; }
+.dd-menu button:hover { background: var(--own-wash); }
+.dd-menu button[aria-checked="true"] { font-weight: 600; color: var(--own); }
+.dd-menu button .sub { font-weight: 400; }
 tr.cancel td { color: var(--muted); }
 tr.cancel td.price { text-decoration: line-through; }
 .tag { font-size: 11px; color: var(--ink-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; margin-left: 3px; white-space: nowrap; }
@@ -169,8 +180,11 @@ tr.cancel td.price { text-decoration: line-through; }
   <div class="hist-head">
     <div class="top"><div><h3 id="hist-title"></h3><div class="sub" id="hist-sub"></div></div>
       <button class="close" aria-label="닫기" id="hist-close">✕</button></div>
-    <div class="seg" role="group" aria-label="거래 구분" id="hist-kind"></div>
-    <div id="hist-filters"></div>
+    <div class="hist-ctrl">
+      <div class="seg" role="group" aria-label="거래 구분" id="hist-kind"></div>
+      <span class="divider" aria-hidden="true"></span>
+      <div id="hist-filters" class="hist-ctrl"></div>
+    </div>
   </div>
   <div class="hist-body"><table id="hist-table"></table></div>
 </dialog>
@@ -433,8 +447,32 @@ function floorBands(key) {
   ];
 }
 
-const chips = (id, items, current) => `<div class="seg chips" role="group" id="${id}">${items.map(([v, label]) =>
-  `<button data-v="${esc(v)}" aria-pressed="${current === v}">${label}</button>`).join("")}</div>`;
+// 눌러서 펼치는 필터 버튼. items: [값, 이름, 보조설명]
+function dropdown(id, title, items, current) {
+  const sel = items.find(i => i[0] === current) || items[0];
+  return `<div class="dd" id="${id}">
+    <button type="button" class="${current ? "on" : ""}" aria-haspopup="menu" aria-expanded="false">${current ? esc(sel[1]) : title}</button>
+    <div class="dd-menu" role="menu" hidden>${items.map(([v, label, note]) =>
+      `<button type="button" role="menuitemradio" aria-checked="${v === current}" data-v="${esc(v)}"><span>${esc(label)}</span>${note ? `<span class="sub">${esc(note)}</span>` : ""}</button>`).join("")}</div>
+  </div>`;
+}
+
+function bindDropdown(id, onPick) {
+  const root = document.getElementById(id);
+  if (!root) return;
+  const btn = root.querySelector(":scope > button"), menu = root.querySelector(".dd-menu");
+  btn.onclick = e => {
+    e.stopPropagation();
+    const open = menu.hidden;
+    closeMenus();
+    menu.hidden = !open; btn.setAttribute("aria-expanded", open);
+  };
+  menu.querySelectorAll("button").forEach(b => b.onclick = () => onPick(b.dataset.v));
+}
+
+function closeMenus() {
+  document.querySelectorAll(".dd-menu").forEach(m => { m.hidden = true; m.previousElementSibling.setAttribute("aria-expanded", "false"); });
+}
 
 function renderHistory() {
   // 해제된 거래도 취소선으로 함께 보여 준다
@@ -453,10 +491,10 @@ function renderHistory() {
     `<button data-k="${k}" aria-pressed="${hist.kind === k}">${k}</button>`).join("");
   document.querySelectorAll("#hist-kind button").forEach(b => b.onclick = () => { hist.kind = b.dataset.k; renderHistory(); });
   document.getElementById("hist-filters").innerHTML =
-    chips("hist-floor", [["", "전체 층"], ...bands.map(b => [b.id, `${b.label} <span class="sub">${b.text}</span>`])], hist.floor) +
-    (sale && dongs.length ? chips("hist-dong", [["", "전체 동"], ...dongs.map(d => [d, d + "동"]), ["none", "동 미공개"]], hist.dong) : "");
-  document.querySelectorAll("#hist-floor button").forEach(b => b.onclick = () => { hist.floor = b.dataset.v; renderHistory(); });
-  document.querySelectorAll("#hist-dong button").forEach(b => b.onclick = () => { hist.dong = b.dataset.v; renderHistory(); });
+    dropdown("hist-floor", "층", [["", "전체"], ...bands.map(b => [b.id, b.label, b.text])], hist.floor) +
+    (sale && dongs.length ? dropdown("hist-dong", "동", [["", "전체"], ...dongs.map(d => [d, d + "동"]), ["none", "동 미공개", "등기 전"]], hist.dong) : "");
+  bindDropdown("hist-floor", v => { hist.floor = v; renderHistory(); });
+  bindDropdown("hist-dong", v => { hist.dong = v; renderHistory(); });
 
   document.getElementById("hist-sub").textContent = `전용 84㎡ ${hist.kind} ${rows.length}건` +
     (valid.length ? ` · 중앙값 ${fmtWon(median(valid))}` : "") + (sale ? " · 동은 등기 후 공개" : "");
@@ -474,7 +512,10 @@ function renderHistory() {
 {
   const dlg = document.getElementById("hist");
   document.getElementById("hist-close").onclick = () => dlg.close();
-  dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });  // 바깥(배경) 누르면 닫기
+  dlg.addEventListener("click", e => {
+    if (e.target === dlg) dlg.close();  // 바깥(배경) 누르면 닫기
+    else if (!e.target.closest(".dd")) closeMenus();
+  });
 }
 
 function renderTabs() {
