@@ -4,172 +4,225 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>대구 아파트 시세</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
+/* 형태 규칙: 카드 16px, 버튼·입력류 10px(내부 버튼 8px), 태그 6px. 버튼 높이는 기본 36px, 표 안에서는 30px. */
 :root {
   color-scheme: light;
-  --page: #f9f9f7;
-  --surface: #fcfcfb;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #898781;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --border: rgba(11,11,11,0.10);
+  --page: #f3f4f6;
+  --surface: #fdfdfe;
+  --panel: #f3f4f6;
+  --ink: #16181d;
+  --ink-2: #4a4f59;
+  --muted: #868b94;
+  --line: #e5e7eb;
+  --axis: #c9ccd2;
+  --border: rgba(22,24,29,0.08);
   --own: #2a78d6;
-  --own-wash: rgba(42,120,214,0.10);
-  --other: #b9b8b1;
-  --other-hi: #52514e;
+  --own-wash: rgba(42,120,214,0.08);
+  --other: #b8bcc4;
+  --other-hi: #4a4f59;
   --up: #d03b3b;
   --down: #2a78d6;
+  --seg-on: #fdfdfe;
+  --shadow: 0 1px 2px rgba(22,24,29,0.06), 0 1px 1px rgba(22,24,29,0.04);
+  --pop: 0 10px 30px rgba(22,24,29,0.14);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --page: #0d0d0d;
-    --surface: #1a1a19;
-    --ink: #f0efec;
-    --ink-2: #c3c2b7;
-    --muted: #898781;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --border: rgba(255,255,255,0.10);
+    --page: #0f1012;
+    --surface: #18191c;
+    --panel: #222327;
+    --ink: #eeeff1;
+    --ink-2: #b9bcc3;
+    --muted: #868b94;
+    --line: #2a2c31;
+    --axis: #3a3d43;
+    --border: rgba(255,255,255,0.08);
     --own: #3987e5;
-    --own-wash: rgba(57,135,229,0.16);
-    --other: #4a4a46;
-    --other-hi: #c3c2b7;
+    --own-wash: rgba(57,135,229,0.14);
+    --other: #4b4e55;
+    --other-hi: #b9bcc3;
     --up: #e66767;
     --down: #3987e5;
+    --seg-on: #34363b;
+    --shadow: none;
+    --pop: 0 10px 30px rgba(0,0,0,0.5);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --page: #0d0d0d;
-  --surface: #1a1a19;
-  --ink: #f0efec;
-  --ink-2: #c3c2b7;
-  --muted: #898781;
-  --grid: #2c2c2a;
-  --axis: #383835;
-  --border: rgba(255,255,255,0.10);
-  --own: #3987e5;
-  --own-wash: rgba(57,135,229,0.16);
-  --other: #4a4a46;
-  --other-hi: #c3c2b7;
-  --up: #e66767;
-  --down: #3987e5;
+  --page: #0f1012; --surface: #18191c; --panel: #222327; --ink: #eeeff1; --ink-2: #b9bcc3; --muted: #868b94;
+  --line: #2a2c31; --axis: #3a3d43; --border: rgba(255,255,255,0.08); --own: #3987e5; --own-wash: rgba(57,135,229,0.14);
+  --other: #4b4e55; --other-hi: #b9bcc3; --up: #e66767; --down: #3987e5; --seg-on: #34363b; --shadow: none; --pop: 0 10px 30px rgba(0,0,0,0.5);
 }
 * { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--page); color: var(--ink);
-  font: 15px/1.5 system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font: 15px/1.5 "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  /* 한글은 단어 단위로만 줄바꿈 */
+  word-break: keep-all; overflow-wrap: break-word;
+  -webkit-font-smoothing: antialiased;
 }
+button { font: inherit; color: inherit; }
+.num, .value, td, .metric b { font-variant-numeric: tabular-nums; }
+.nowrap { white-space: nowrap; }
 main { max-width: 960px; margin: 0 auto; padding: 20px 16px 48px; }
-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
-h1 { font-size: 22px; margin: 0; }
-h2 { font-size: 17px; margin: 0 0 10px; }
+
+/* 머리말 */
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin: 0; white-space: nowrap; }
+h2 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; margin: 0; white-space: nowrap; }
 .sub { color: var(--muted); font-size: 13px; }
-.tabs { display: flex; gap: 6px; margin: 16px 0; overflow-x: auto; }
-.tab, .seg button {
-  border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
-  border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap;
+
+/* 세그먼트 컨트롤: 단지 전환, 매매/전세, 기간에 모두 같은 모양을 쓴다 */
+.seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--panel); border-radius: 10px; }
+.seg button {
+  height: 30px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: var(--ink-2);
+  font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer;
 }
-.tab[aria-selected="true"], .seg button[aria-pressed="true"] { background: var(--ink); color: var(--page); border-color: var(--ink); }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
-.title-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
-.title-row h2 { margin: 0; font-size: 19px; }
-a.btn { color: var(--own); font-size: 14px; text-decoration: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
-.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-@media (max-width: 640px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.tile .label { color: var(--ink-2); font-size: 13px; }
-.tile .value { font-size: 22px; font-weight: 600; margin: 2px 0; }
-.tile .note { color: var(--muted); font-size: 12px; }
-.delta { white-space: nowrap; }
-.delta.up { color: var(--up); } .delta.down { color: var(--down); }
-.controls { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 8px; }
-.seg { display: flex; gap: 4px; }
-.seg button { padding: 4px 12px; font-size: 13px; }
+.seg button[aria-pressed="true"], .seg button[aria-selected="true"] { background: var(--seg-on); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
+.seg.block { display: flex; width: 100%; max-width: 560px; }
+.seg.block button { flex: 1; height: 34px; font-size: 15px; }
+
+/* 일반 버튼 */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 14px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--ink);
+  font-size: 14px; font-weight: 600; white-space: nowrap; text-decoration: none; cursor: pointer;
+}
+.btn.sm { height: 30px; padding: 0 10px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.btn .arrow { color: var(--muted); font-weight: 400; }
+.seg button:active, .btn:active, .dd > button:active { transform: scale(0.98); }
+@media (prefers-reduced-motion: no-preference) { .seg button, .btn, .dd > button { transition: background .15s, color .15s, transform .1s; } }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 16px; margin-bottom: 12px; box-shadow: var(--shadow); }
+.card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.notice { color: var(--ink-2); font-size: 14px; }
+
+/* 기준 단지 요약 */
+.summary-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.summary-head h2 { font-size: 22px; letter-spacing: -0.02em; }
+.meta { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 2px; color: var(--muted); font-size: 13px; }
+.meta span { white-space: nowrap; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 560px) { .actions { width: 100%; } }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 720px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { background: var(--panel); border-radius: 12px; padding: 12px 12px 11px; min-width: 0; }
+.tile .label { display: flex; justify-content: space-between; align-items: center; gap: 6px; height: 20px; color: var(--ink-2); font-size: 13px; font-weight: 500; white-space: nowrap; }
+.tile .value { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 2px 0 4px; white-space: nowrap; }
+.tile .line { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.tile .deltas { display: grid; gap: 2px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.chip { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.delta { white-space: nowrap; font-weight: 600; }
+.delta.up { color: var(--up); } .delta.down { color: var(--down); } .delta.flat { color: var(--ink-2); }
+.tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 6px; background: var(--panel);
+  font-size: 11px; font-weight: 500; color: var(--ink-2); white-space: nowrap; vertical-align: middle; }
+.tag.warn { color: var(--up); }
+
+/* 그래프 */
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
 /* 그래프를 누르고 끌 때 글자 선택·길게 누르기 메뉴가 뜨지 않게 하고, 좌우 드래그는 툴팁, 위아래는 스크롤로 쓴다 */
 .chart-wrap { position: relative; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: pan-y; }
 svg { display: block; width: 100%; height: auto; overflow: visible; }
-svg text { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+svg text { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; font-family: inherit; }
 .tip {
   position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-  min-width: 160px; display: none; z-index: 2;
+  border-radius: 12px; padding: 10px 12px; font-size: 13px; box-shadow: var(--pop); min-width: 180px; display: none; z-index: 2;
 }
-.tip b { display: block; margin-bottom: 4px; font-size: 13px; }
-.tip .r { display: flex; justify-content: space-between; gap: 12px; color: var(--ink-2); }
-.tip .r.own { color: var(--ink); font-weight: 600; }
-.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); margin-top: 6px; }
-.legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
-.legend i.dot { width: 8px; height: 8px; border-radius: 50%; opacity: .5; }
-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-th, td { padding: 8px 6px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; font-variant-numeric: tabular-nums; }
-th { color: var(--ink-2); font-weight: 500; font-size: 12px; }
-th:first-child, td:first-child { text-align: left; white-space: normal; min-width: 8.5em; }
-@media (max-width: 520px) {
-  .col-n { display: none; }
-  table { font-size: 13px; }
-  th, td { padding: 8px 3px; }
-  th:first-child, td:first-child { min-width: 6.5em; }
-  .delta { font-size: 12px; }
+.tip b { display: block; margin-bottom: 6px; font-size: 13px; }
+.tip .r { display: flex; justify-content: space-between; gap: 14px; color: var(--ink-2); white-space: nowrap; line-height: 1.7; }
+.tip .r.own { color: var(--ink); font-weight: 700; }
+.tip .r.note { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--ink-2); margin: 10px 0 4px; }
+.legend span { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 16px; height: 2.5px; border-radius: 2px; }
+.legend i.dot { width: 8px; height: 8px; border-radius: 50%; opacity: .45; }
+
+/* 비교표: 휴대폰에서는 단지명 한 줄 + 지표 4칸, 넓은 화면에서는 한 줄 */
+.cmp { margin-top: 12px; }
+.cmp-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-areas: "name name name name" "a b c d";
+  column-gap: 8px; row-gap: 6px; padding: 12px 8px; border-top: 1px solid var(--line); border-radius: 0; cursor: pointer; }
+.cmp-row.head { grid-template-areas: "a b c d"; padding: 0 8px 8px; border-top: 0; cursor: default; color: var(--muted); font-size: 12px; font-weight: 500; }
+.cmp-row.head .name { display: none; }
+.cmp-row .name { grid-area: name; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.cmp-row .name .t { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.cmp-row .name strong { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmp-row .name .sub { white-space: nowrap; }
+.cmp-row > .m { text-align: right; white-space: nowrap; font-size: 14px; }
+.cmp-row > .m:nth-of-type(2) { grid-area: a; } .cmp-row > .m:nth-of-type(3) { grid-area: b; }
+.cmp-row > .m:nth-of-type(4) { grid-area: c; } .cmp-row > .m:nth-of-type(5) { grid-area: d; }
+.cmp-row > .m .sub { font-size: 11px; }
+.cmp-row > .none { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+.cmp-row.own .name strong { font-weight: 800; }
+.cmp-row.own { box-shadow: inset 3px 0 0 var(--own); }
+.cmp-row.hi { background: var(--own-wash); }
+@media (min-width: 720px) {
+  .cmp-row, .cmp-row.head { grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(0, 1fr)); grid-template-areas: "name a b c d"; align-items: center; }
+  .cmp-row.head .name { display: block; visibility: hidden; }
 }
-tbody tr { cursor: pointer; }
-tbody tr.own td { font-weight: 600; }
-tbody tr.own td:first-child { box-shadow: inset 3px 0 0 var(--own); padding-left: 10px; }
-tbody tr.hi { background: var(--own-wash); }
-.scroll { overflow-x: auto; }
+
+/* 새 거래 */
 .events { list-style: none; margin: 0; padding: 0; }
-.events li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--grid); font-size: 14px; }
-.events li:last-child { border-bottom: 0; }
-.events .meta { color: var(--muted); font-size: 12px; }
-.badge { font-size: 11px; border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; margin-left: 4px; color: var(--ink-2); }
-.badge.own { color: var(--own); border-color: var(--own); }
-.empty { color: var(--muted); font-size: 14px; padding: 12px 0; }
-.btns { display: flex; flex-wrap: wrap; gap: 6px; }
-button.btn { font: inherit; font-size: 14px; color: var(--own); background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
-button.mini { font: inherit; font-size: 12px; color: var(--own); background: none; border: 1px solid var(--border); border-radius: 6px; padding: 1px 7px; margin-top: 4px; cursor: pointer; }
-dialog#hist { width: min(560px, 100vw); max-width: 100vw; max-height: 88vh; height: 88vh;  /* 필터로 행 수가 바뀌어도 창 높이 고정 */
-  margin: auto auto 0; padding: 0; border: 1px solid var(--border);
-  border-radius: 16px 16px 0 0; background: var(--surface); color: var(--ink); }
+.events li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.events li:first-child { border-top: 0; padding-top: 0; }
+.events .t { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.events .t strong { font-weight: 600; white-space: nowrap; }
+.events .meta { margin-top: 2px; }
+.events .price { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+.foot { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 20px 4px 0; }
+
+/* 실거래 내역 창 */
+dialog#hist { width: min(600px, 100vw); max-width: 100vw; max-height: 88vh; height: 88vh;  /* 필터로 행 수가 바뀌어도 창 높이 고정 */
+  margin: auto auto 0; padding: 0; border: 1px solid var(--border); border-radius: 16px 16px 0 0; background: var(--surface); color: var(--ink); }
 @media (min-width: 640px) { dialog#hist { margin: auto; border-radius: 16px; } }
-dialog#hist::backdrop { background: rgba(0,0,0,0.4); }
-.hist-head { position: sticky; top: 0; background: var(--surface); padding: 16px 16px 8px; border-bottom: 1px solid var(--grid); z-index: 1; }
-.hist-head .top { display: flex; justify-content: space-between; align-items: start; gap: 8px; margin-bottom: 10px; }
-.hist-head h3 { margin: 0; font-size: 17px; }
-.close { font: inherit; font-size: 20px; line-height: 1; background: none; border: 0; color: var(--ink-2); cursor: pointer; padding: 2px 6px; }
-.hist-body { padding: 0 16px 16px; }
-.hist-body table { font-size: 13px; }
-.hist-body td, .hist-body th { padding: 7px 4px; }
-.hist-body th:first-child, .hist-body td:first-child { min-width: 0; }
-.hist-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.divider { width: 1px; height: 20px; background: var(--axis); margin: 0 4px; }
+dialog#hist::backdrop { background: rgba(10,11,13,0.45); }
+.hist-head { position: sticky; top: 0; background: var(--surface); padding: 18px 16px 12px; border-bottom: 1px solid var(--line); z-index: 1; }
+.hist-head .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 12px; }
+.hist-head h3 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
+.close { width: 36px; height: 36px; flex: none; border: 0; border-radius: 10px; background: var(--panel); color: var(--ink-2); font-size: 16px; cursor: pointer; }
+.hist-body { padding: 4px 16px 20px; }
+.hist-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.divider { width: 1px; height: 22px; background: var(--axis); }
 .dd { position: relative; }
-.dd > button { font: inherit; font-size: 13px; padding: 4px 10px 4px 12px; border-radius: 999px; border: 1px solid var(--border);
-  background: var(--surface); color: var(--ink-2); cursor: pointer; white-space: nowrap; }
-.dd > button.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
-.dd > button::after { content: "▾"; margin-left: 4px; font-size: 11px; }
-.dd-menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 3; min-width: 150px; max-height: 50vh; overflow-y: auto;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); padding: 4px; }
+.dd > button { height: 36px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--panel); color: var(--ink-2);
+  font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer; }
+.dd > button.on { background: var(--ink); color: var(--surface); font-weight: 600; }
+.dd > button::after { content: "▾"; margin-left: 6px; font-size: 11px; opacity: .7; }
+.dd-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 3; min-width: 170px; max-height: 50vh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--pop); padding: 4px; }
 .dd-menu[hidden] { display: none; }
-.dd-menu button { display: flex; justify-content: space-between; gap: 12px; width: 100%; font: inherit; font-size: 14px; text-align: left;
-  background: none; border: 0; border-radius: 6px; padding: 8px 10px; color: var(--ink); cursor: pointer; white-space: nowrap; }
-.dd-menu button:hover { background: var(--own-wash); }
-.dd-menu button[aria-checked="true"] { font-weight: 600; color: var(--own); }
-.dd-menu button .sub { font-weight: 400; }
+.dd-menu button { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: 100%; height: 38px; padding: 0 10px;
+  border: 0; border-radius: 8px; background: none; color: var(--ink); font-size: 14px; text-align: left; white-space: nowrap; cursor: pointer; }
+.dd-menu button:hover { background: var(--panel); }
+.dd-menu button[aria-checked="true"] { font-weight: 700; color: var(--own); }
+.dd-menu button .sub { font-weight: 400; font-size: 12px; }
+
+/* 표 (실거래 내역) */
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { height: 44px; padding: 0 4px; text-align: right; border-top: 1px solid var(--line); white-space: nowrap; }
+thead th { height: 36px; border-top: 0; color: var(--muted); font-size: 12px; font-weight: 500; position: sticky; }
+th:first-child, td:first-child { text-align: left; padding-left: 0; }
+th:last-child, td:last-child { padding-right: 0; }
+@media (max-width: 400px) { table { font-size: 13px; } }
+td.price { font-weight: 600; }
 tr.cancel td { color: var(--muted); }
-tr.cancel td.price { text-decoration: line-through; }
-.tag { font-size: 11px; color: var(--ink-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; margin-left: 3px; white-space: nowrap; }
-.foot { color: var(--muted); font-size: 12px; margin-top: 24px; }
+tr.cancel td.price .v { text-decoration: line-through; font-weight: 400; }
+td .tag { margin-left: 4px; }
 </style>
 </head>
 <body>
 <main>
   <header>
     <h1>대구 아파트 시세</h1>
-    <span class="sub" id="updated">불러오는 중</span>
+    <span class="sub nowrap" id="updated">불러오는 중</span>
   </header>
-  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <nav class="seg block" id="tabs" role="tablist" aria-label="단지 선택"></nav>
+  <div style="height:12px"></div>
   <div id="view"></div>
   <p class="foot">
     국토교통부 실거래가 공개자료 기준, 전용 83~86㎡(84㎡ 타입)만 집계합니다. 해제 신고된 거래는 제외합니다.
@@ -178,7 +231,7 @@ tr.cancel td.price { text-decoration: line-through; }
 </main>
 <dialog id="hist" aria-labelledby="hist-title">
   <div class="hist-head">
-    <div class="top"><div><h3 id="hist-title"></h3><div class="sub" id="hist-sub"></div></div>
+    <div class="top"><div><h3 id="hist-title"></h3><div class="meta" id="hist-sub"></div></div>
       <button class="close" aria-label="닫기" id="hist-close">✕</button></div>
     <div class="hist-ctrl">
       <div class="seg" role="group" aria-label="거래 구분" id="hist-kind"></div>
@@ -256,11 +309,20 @@ function stats(key, kind) {
   };
 }
 
-const trendNote = s => s.recent == null ? "최근 3개월 거래 없음" :
-  `최근 3개월 중앙값 · ${s.count3m}건${s.count3m < 3 ? " (거래가 적어 참고만)" : ""}<br>직전 3개월보다 ${deltaHtml(s.change3m) || "-"}<br>1년 전보다 ${deltaHtml(s.change1y) || "-"}`;
+const deltaHtml = pct => pct == null ? "" :
+  `<span class="delta ${pct > 0 ? "up" : pct < 0 ? "down" : "flat"}">${pct > 0 ? "▲" : pct < 0 ? "▼" : ""}${Math.abs(pct).toFixed(1)}%</span>`;
+const dotDate = d => d.replaceAll("-", ".");
 
-const deltaHtml = (pct, suffix = "") => pct == null ? "" :
-  `<span class="delta ${pct > 0 ? "up" : pct < 0 ? "down" : ""}">${pct > 0 ? "▲" : pct < 0 ? "▼" : ""} ${Math.abs(pct).toFixed(1)}%${suffix}</span>`;
+// 요약 타일: 이름 · 값 · 보조 한 줄 · 변동 칩
+function tile(label, value, line, deltas = "", tag = "") {
+  return `<div class="tile"><div class="label">${label}${tag}</div><div class="value">${value}</div>
+    <div class="line">${line}</div>${deltas ? `<div class="deltas">${deltas}</div>` : ""}</div>`;
+}
+function priceTile(label, s) {
+  if (s.recent == null) return tile(label, "-", "최근 3개월 거래 없음");
+  const chips = `<span class="chip">직전 3개월 대비 ${deltaHtml(s.change3m) || "-"}</span><span class="chip">1년 전 대비 ${deltaHtml(s.change1y) || "-"}</span>`;
+  return tile(label, fmtWon(s.recent), `최근 3개월 중앙값 ${s.count3m}건`, chips, s.count3m < 3 ? '<span class="tag warn">거래 적음</span>' : "");
+}
 
 function render() {
   const g = DATA.groups[state.group];
@@ -269,50 +331,52 @@ function render() {
   const ratio = sale.recent && jeon.recent ? jeon.recent / sale.recent * 100 : null;
   const groupKeys = new Set(g.complexes.map(c => c.key));
   const events = (DATA.events || []).filter(e => groupKeys.has(e.key)).slice(0, 15);
+  const segBtns = (attr, items, cur) => items.map(([v, t]) => `<button ${attr}="${v}" aria-pressed="${cur === v}">${t}</button>`).join("");
 
   document.getElementById("view").innerHTML = `
     <section class="card">
-      <div class="title-row">
-        <div><h2>${esc(g.name)}</h2><div class="sub">${esc(g.region)}${g.completed ? ` · ${esc(g.completed)} 준공` : ""} · 전용 84㎡</div></div>
-        <div class="btns"><button class="btn" data-hist="${esc(own.key)}">실거래 내역</button>
-          <a class="btn" href="${esc(g.naver_url)}" target="_blank" rel="noopener">네이버 부동산 호가 보기 ↗</a></div>
+      <div class="summary-head">
+        <div><h2>${esc(g.name)}</h2>
+          <div class="meta"><span>${esc(g.region)}</span>${g.completed ? `<span>${esc(g.completed.replace("-", "."))} 준공</span>` : ""}<span>전용 84㎡</span></div></div>
+        <div class="actions">
+          <button class="btn" data-hist="${esc(own.key)}">실거래 내역</button>
+          <a class="btn" href="${esc(g.naver_url)}" target="_blank" rel="noopener">네이버 호가<span class="arrow">↗</span></a>
+        </div>
       </div>
       <div class="tiles">
-        <div class="tile"><div class="label">최근 매매</div><div class="value">${fmtWon(sale.last?.[2])}</div>
-          <div class="note">${sale.last ? `${sale.last[0].replaceAll("-", ".")} · ${sale.last[3]}층` : "거래 없음"}</div></div>
-        <div class="tile"><div class="label">매매 시세</div><div class="value">${fmtWon(sale.recent)}</div>
-          <div class="note">${trendNote(sale)}</div></div>
-        <div class="tile"><div class="label">전세 시세</div><div class="value">${fmtWon(jeon.recent)}</div>
-          <div class="note">${trendNote(jeon)}</div></div>
-        <div class="tile"><div class="label">전세가율</div><div class="value">${ratio ? ratio.toFixed(0) + "%" : "-"}</div>
-          <div class="note">전세 ÷ 매매 (3개월 중앙값)</div></div>
+        ${tile("최근 매매", fmtWon(sale.last?.[2]), sale.last ? `${dotDate(sale.last[0])} ${sale.last[3]}층` : "거래 없음")}
+        ${priceTile("매매 시세", sale)}
+        ${priceTile("전세 시세", jeon)}
+        ${tile("전세가율", ratio ? ratio.toFixed(0) + "%" : "-", "전세 ÷ 매매")}
       </div>
     </section>
 
-    ${(DATA.missing || []).includes("전세") ? `<div class="card empty">전세 실거래는 아직 수집하지 못했습니다. 공공데이터포털에서 「국토교통부_아파트 전월세 실거래가 자료」를 활용신청하면 다음 수집부터 표시됩니다.</div>` : ""}
+    ${(DATA.missing || []).includes("전세") ? `<div class="card notice">전세 실거래는 아직 수집하지 못했습니다. 공공데이터포털에서 「국토교통부_아파트 전월세 실거래가 자료」를 활용신청하면 다음 수집부터 표시됩니다.</div>` : ""}
     <section class="card">
-      <div class="title-row"><h2 style="font-size:16px">비교 단지</h2></div>
-      <div class="controls">
-        <div class="seg" role="group" aria-label="거래 구분">${["매매", "전세"].map(k => `<button data-kind="${k}" aria-pressed="${state.kind === k}">${k}</button>`).join("")}</div>
-        <div class="seg" role="group" aria-label="기간">${[1, 3, 5].map(y => `<button data-years="${y}" aria-pressed="${state.years === y}">${y}년</button>`).join("")}</div>
+      <div class="card-head">
+        <h2>비교 단지</h2>
+        <div class="controls">
+          <div class="seg" role="group" aria-label="거래 구분">${segBtns("data-kind", [["매매", "매매"], ["전세", "전세"]], state.kind)}</div>
+          <div class="seg" role="group" aria-label="기간">${segBtns("data-years", [[1, "1년"], [3, "3년"], [5, "5년"]], state.years)}</div>
+        </div>
       </div>
       <div class="chart-wrap" id="chart"></div>
       <div class="legend"><span><i style="background:var(--own)"></i>${esc(own.name)}</span>
         <span><i class="dot" style="background:var(--own)"></i>개별 거래</span>
-        <span><i style="background:var(--other)"></i>비교 단지 (표의 행을 누르면 강조)</span></div>
-      <div class="scroll" style="margin-top:14px"><table id="cmp"></table></div>
+        <span><i style="background:var(--other)"></i>비교 단지</span></div>
+      <div class="cmp" id="cmp"></div>
     </section>
 
     <section class="card">
-      <h2 style="font-size:16px">새로 신고된 거래</h2>
+      <div class="card-head"><h2>새로 신고된 거래</h2></div>
       ${events.length ? `<ul class="events">${events.map(e => `
-        <li><div>${e.own ? `<b>${esc(e.name)}</b>` : esc(e.name)}<span class="badge">${e.kind}</span>${e.cancelled ? '<span class="badge">해제</span>' : ""}
-          <div class="meta">거래일 ${e.date.replaceAll("-", ".")} · ${e.floor}층 · ${e.found.replaceAll("-", ".")} 확인</div></div>
-          <div style="font-variant-numeric:tabular-nums">${fmtWon(e.price)}</div></li>`).join("")}</ul>`
+        <li><div><div class="t"><strong>${esc(e.name)}</strong><span class="tag">${e.kind}</span>${e.cancelled ? '<span class="tag warn">해제</span>' : ""}</div>
+          <div class="meta"><span>계약 ${shortDate(e.date)}</span><span>${e.floor}층</span><span>${shortDate(e.found)} 확인</span></div></div>
+          <div class="price">${fmtWon(e.price)}</div></li>`).join("")}</ul>`
         : `<div class="empty">아직 없습니다. 매일 아침 수집할 때 새로 신고된 거래가 있으면 여기에 쌓이고 GitHub 알림으로도 보내 드립니다.</div>`}
     </section>`;
 
-  bindHistButtons(document.querySelector(".title-row"));
+  bindHistButtons(document.querySelector(".summary-head"));
   document.querySelectorAll("[data-kind]").forEach(b => b.onclick = () => { state.kind = b.dataset.kind; render(); });
   document.querySelectorAll("[data-years]").forEach(b => b.onclick = () => { state.years = +b.dataset.years; render(); });
   renderTable(g);
@@ -322,19 +386,22 @@ function render() {
 function renderTable(g) {
   const rows = g.complexes.map(c => ({ c, s: stats(c.key, state.kind) }));
   document.getElementById("cmp").innerHTML = `
-    <thead><tr><th>단지</th><th>시세<div class="sub">3개월 중앙값</div></th><th>직전 3개월<div class="sub">대비</div></th><th class="col-n">1년 전<div class="sub">대비</div></th><th>최근 거래</th><th class="col-n">3개월<div class="sub">거래</div></th></tr></thead>
-    <tbody>${rows.map(({ c, s }) => `
-      <tr data-key="${esc(c.key)}" class="${c.own ? "own" : ""} ${state.hi === c.key ? "hi" : ""}">
-        <td>${esc(c.name)}<div class="sub">${esc(c.umd)}</div>${(DATA.trades[c.key] || []).length ? `<button class="mini" data-hist="${esc(c.key)}">실거래 내역</button>` : ""}</td>
-        ${s.rows.length ? `<td>${fmtWon(s.recent)}</td>
-        <td>${deltaHtml(s.change3m) || "-"}</td>
-        <td class="col-n">${deltaHtml(s.change1y) || "-"}</td>
-        <td>${s.last ? `${fmtWon(s.last[2])}<div class="sub">${s.last[0].slice(2).replaceAll("-", ".")}</div>` : "-"}</td>
-        <td class="col-n">${s.count3m}건</td>` : `<td colspan="5" class="sub" style="text-align:left;white-space:normal">84㎡ ${state.kind} 실거래 없음. 신축은 등기 전까지 분양권·입주권 거래로 신고되어 아직 잡히지 않을 수 있습니다.</td>`}</tr>`).join("")}</tbody>`;
+    <div class="cmp-row head"><div class="name">단지</div><div class="m">시세</div><div class="m">3개월</div><div class="m">1년</div><div class="m">최근 거래</div></div>
+    ${rows.map(({ c, s }) => `
+    <div class="cmp-row ${c.own ? "own" : ""} ${state.hi === c.key ? "hi" : ""}" data-key="${esc(c.key)}">
+      <div class="name"><div class="t"><strong>${esc(c.name)}</strong><span class="sub">${esc(c.umd)}</span></div>
+        ${(DATA.trades[c.key] || []).length ? `<button class="btn sm" data-hist="${esc(c.key)}">내역</button>` : ""}</div>
+      ${s.rows.length ? `
+      <div class="m"><b>${fmtWon(s.recent)}</b></div>
+      <div class="m">${deltaHtml(s.change3m) || "-"}</div>
+      <div class="m">${deltaHtml(s.change1y) || "-"}</div>
+      <div class="m">${s.last ? `${fmtWon(s.last[2])}<div class="sub">${shortDate(s.last[0])}</div>` : "-"}</div>`
+      : `<div class="none">84㎡ ${state.kind} 실거래 없음. 신축은 등기 전까지 분양권·입주권 거래로 신고되어 아직 잡히지 않을 수 있습니다.</div>`}
+    </div>`).join("")}`;
   bindHistButtons(document.getElementById("cmp"));
-  document.querySelectorAll("#cmp tbody tr").forEach(tr => tr.onclick = e => {
+  document.querySelectorAll("#cmp .cmp-row[data-key]").forEach(row => row.onclick = e => {
     if (e.target.closest("[data-hist]")) return;
-    const k = tr.dataset.key;
+    const k = row.dataset.key;
     state.hi = state.hi === k || g.complexes.find(c => c.key === k).own ? null : k;
     renderTable(g); renderChart(g);
   });
@@ -343,7 +410,7 @@ function renderTable(g) {
 function renderChart(g) {
   const box = document.getElementById("chart");
   const W = Math.max(320, box.clientWidth), H = W < 520 ? 240 : 300;
-  const M = { l: 44, r: 12, t: 10, b: 24 };
+  const M = { l: 40, r: 8, t: 10, b: 24 };
   const to = ym(today()), from = addMonths(to, -12 * state.years + 1);
   const series = g.complexes.map(c => ({ c, pts: monthlySeries(rowsOf(c.key, state.kind), from, to) }));
   const own = series.find(s => s.c.own);
@@ -383,7 +450,7 @@ function renderChart(g) {
       ${hiS ? `<path d="${path(hiS.pts)}" fill="none" stroke="var(--other-hi)" stroke-width="2" stroke-dasharray="5 3" stroke-linejoin="round"/>` : ""}
       ${dots.map(r => `<circle cx="${dayX(r[0]).toFixed(1)}" cy="${y(r[2]).toFixed(1)}" r="3.5" fill="var(--own)" fill-opacity="0.3"/>`).join("")}
       <path d="${path(own.pts)}" fill="none" stroke="var(--surface)" stroke-width="5" stroke-linejoin="round"/>
-      <path d="${path(own.pts)}" fill="none" stroke="var(--own)" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="${path(own.pts)}" fill="none" stroke="var(--own)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
       <line id="xh" y1="${M.t}" y2="${H - M.b}" stroke="var(--axis)" visibility="hidden"/>
       <circle id="xo" r="4.5" fill="var(--own)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/>
       <rect x="${M.l}" y="0" width="${W - M.l - M.r}" height="${H}" fill="transparent" id="hit"/>
@@ -402,7 +469,7 @@ function renderChart(g) {
     const lines = series.map(s => ({ s, v: s.pts[i].v })).filter(o => o.v != null).sort((a, b) => b.v - a.v);
     tip.innerHTML = `<b>${months[i].replace("-", ".")}</b>` + (lines.length ? lines.map(o =>
       `<div class="r ${o.s.c.own ? "own" : ""}"><span>${esc(o.s.c.name)}</span><span>${fmtWon(o.v)}</span></div>`).join("")
-      : `<div class="r">거래 없음</div>`) + (own.pts[i].n ? `<div class="r" style="margin-top:4px">${esc(own.c.name)} 이달 거래 ${own.pts[i].n}건</div>` : "");
+      : `<div class="r">거래 없음</div>`) + (own.pts[i].n ? `<div class="r note">${esc(own.c.name)} 이달 거래 ${own.pts[i].n}건</div>` : "");
     tip.style.display = "block";
     const left = x(i) / scale, tw = tip.offsetWidth;
     tip.style.left = Math.min(Math.max(0, left + 12 + tw > pt.width ? left - tw - 12 : left + 12), pt.width - tw) + "px";
@@ -496,15 +563,15 @@ function renderHistory() {
   bindDropdown("hist-floor", v => { hist.floor = v; renderHistory(); });
   bindDropdown("hist-dong", v => { hist.dong = v; renderHistory(); });
 
-  document.getElementById("hist-sub").textContent = `전용 84㎡ ${hist.kind} ${rows.length}건` +
-    (valid.length ? ` · 중앙값 ${fmtWon(median(valid))}` : "") + (sale ? " · 동은 등기 후 공개" : "");
+  document.getElementById("hist-sub").innerHTML = `<span>전용 84㎡ ${hist.kind} ${rows.length}건</span>` +
+    (valid.length ? `<span>중앙값 ${fmtWon(median(valid))}</span>` : "") + (sale ? "<span>동은 등기 후 공개</span>" : "");
   document.getElementById("hist-table").innerHTML = rows.length ? `
     <thead><tr><th>계약일</th>${sale ? "<th>등기일</th><th>동</th>" : ""}<th>층</th><th>가격</th></tr></thead>
     <tbody>${rows.map(r => `<tr class="${r[5] ? "cancel" : ""}">
       <td>${shortDate(r[0])}</td>
       ${sale ? `<td>${shortDate(r[7])}</td><td>${dongOf(r) ? esc(dongOf(r)) + "동" : '<span class="sub">-</span>'}</td>` : ""}
-      <td>${r[3]}</td>
-      <td class="price">${fmtWon(r[2])}${r[5] ? '<span class="tag">해제</span>' : ""}${r[8] ? '<span class="tag">직거래</span>' : ""}</td>
+      <td>${r[3]}층</td>
+      <td class="price">${r[8] ? '<span class="tag">직거래</span>' : ""}${r[5] ? '<span class="tag warn">해제</span>' : ""} <span class="v">${fmtWon(r[2])}</span></td>
     </tr>`).join("")}</tbody>`
     : `<tbody><tr><td class="empty">조건에 맞는 ${hist.kind} 거래가 없습니다.</td></tr></tbody>`;
 }
@@ -520,8 +587,8 @@ function renderHistory() {
 
 function renderTabs() {
   document.getElementById("tabs").innerHTML = DATA.groups.map((g, i) =>
-    `<button class="tab" role="tab" data-i="${i}" aria-selected="${i === state.group}">${esc(g.name)}</button>`).join("");
-  document.querySelectorAll(".tab").forEach(b => b.onclick = () => {
+    `<button role="tab" data-i="${i}" aria-selected="${i === state.group}">${esc(g.name)}</button>`).join("");
+  document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
     state.group = +b.dataset.i; state.hi = null; renderTabs(); render();
     try { localStorage.setItem("apt-tab", state.group); } catch {}
   });
@@ -532,14 +599,14 @@ fetch(DATA_URL, { cache: "no-cache" })
   .then(d => {
     DATA = d;
     try { const t = +localStorage.getItem("apt-tab"); if (t < d.groups.length) state.group = t; } catch {}
-    document.getElementById("updated").textContent = `${d.updated.slice(0, 10).replaceAll("-", ".")} ${d.updated.slice(11, 16)} 갱신`;
+    document.getElementById("updated").textContent = `${d.updated.slice(0, 10).replaceAll("-", ".")} ${d.updated.slice(11, 16)} 기준`;
     renderTabs(); render();
     let w = innerWidth;
     addEventListener("resize", () => { if (innerWidth !== w) { w = innerWidth; renderChart(DATA.groups[state.group]); } });
   })
   .catch(() => {
     document.getElementById("updated").textContent = "";
-    document.getElementById("view").innerHTML = `<div class="card empty">아직 수집된 데이터가 없습니다. GitHub Actions의 「실거래가 수집」이 한 번 실행되면 표시됩니다.</div>`;
+    document.getElementById("view").innerHTML = `<div class="card notice">아직 수집된 데이터가 없습니다. GitHub Actions의 「실거래가 수집」이 한 번 실행되면 표시됩니다.</div>`;
   });
 </script>
 </body>
