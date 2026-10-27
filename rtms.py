@@ -6,7 +6,7 @@ import re
 import sqlite3
 import time
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from urllib.parse import unquote
@@ -39,6 +39,8 @@ class Complex:
     keywords: list[str]
     completed: str = ""
     naver_complex_id: str = ""
+    # 비교 단지를 찾을 인근 법정동. [{"lawd_cd": "27140", "umd": "신천동"}, ...]
+    nearby: list[dict] = field(default_factory=list)
 
     @property
     def naver_url(self) -> str:

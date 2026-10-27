@@ -7,7 +7,11 @@
     "umd": "신암동",
     "keywords": ["이안센트럴"],
     "completed": "2021-09",
-    "naver_complex_id": ""
+    "naver_complex_id": "",
+    "nearby": [
+      {"lawd_cd": "27140", "umd": "신암동"},
+      {"lawd_cd": "27140", "umd": "신천동"}
+    ]
   },
   {
     "id": "thesharp-libiter-2",
@@ -17,6 +21,11 @@
     "umd": "대봉동",
     "keywords": ["리비테르2"],
     "completed": "2022-03",
-    "naver_complex_id": ""
+    "naver_complex_id": "",
+    "nearby": [
+      {"lawd_cd": "27110", "umd": "대봉동"},
+      {"lawd_cd": "27110", "umd": "봉산동"},
+      {"lawd_cd": "27110", "umd": "남산동"}
+    ]
   }
 ]

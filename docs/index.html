@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리집 시세</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --own: #2a78d6;
+  --own-wash: rgba(42,120,214,0.10);
+  --other: #b9b8b1;
+  --other-hi: #52514e;
+  --up: #d03b3b;
+  --down: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --own: #3987e5;
+    --own-wash: rgba(57,135,229,0.16);
+    --other: #4a4a46;
+    --other-hi: #c3c2b7;
+    --up: #e66767;
+    --down: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --own: #3987e5;
+  --own-wash: rgba(57,135,229,0.16);
+  --other: #4a4a46;
+  --other-hi: #c3c2b7;
+  --up: #e66767;
+  --down: #3987e5;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--page); color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+main { max-width: 960px; margin: 0 auto; padding: 20px 16px 48px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+h1 { font-size: 22px; margin: 0; }
+h2 { font-size: 17px; margin: 0 0 10px; }
+.sub { color: var(--muted); font-size: 13px; }
+.tabs { display: flex; gap: 6px; margin: 16px 0; overflow-x: auto; }
+.tab, .seg button {
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
+  border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap;
+}
+.tab[aria-selected="true"], .seg button[aria-pressed="true"] { background: var(--ink); color: var(--page); border-color: var(--ink); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+.title-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+.title-row h2 { margin: 0; font-size: 19px; }
+a.btn { color: var(--own); font-size: 14px; text-decoration: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 640px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile .label { color: var(--ink-2); font-size: 13px; }
+.tile .value { font-size: 22px; font-weight: 600; margin: 2px 0; }
+.tile .note { color: var(--muted); font-size: 12px; }
+.delta { white-space: nowrap; }
+.delta.up { color: var(--up); } .delta.down { color: var(--down); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 8px; }
+.seg { display: flex; gap: 4px; }
+.seg button { padding: 4px 12px; font-size: 13px; }
+.chart-wrap { position: relative; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.tip {
+  position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  min-width: 160px; display: none; z-index: 2;
+}
+.tip b { display: block; margin-bottom: 4px; font-size: 13px; }
+.tip .r { display: flex; justify-content: space-between; gap: 12px; color: var(--ink-2); }
+.tip .r.own { color: var(--ink); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); margin-top: 6px; }
+.legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
+.legend i.dot { width: 8px; height: 8px; border-radius: 50%; opacity: .5; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 8px 6px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; font-variant-numeric: tabular-nums; }
+th { color: var(--ink-2); font-weight: 500; font-size: 12px; }
+th:first-child, td:first-child { text-align: left; white-space: normal; min-width: 8.5em; }
+@media (max-width: 520px) { .col-n { display: none; } th, td { padding: 8px 4px; } }
+tbody tr { cursor: pointer; }
+tbody tr.own td { font-weight: 600; }
+tbody tr.own td:first-child { box-shadow: inset 3px 0 0 var(--own); padding-left: 10px; }
+tbody tr.hi { background: var(--own-wash); }
+.scroll { overflow-x: auto; }
+.events { list-style: none; margin: 0; padding: 0; }
+.events li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--grid); font-size: 14px; }
+.events li:last-child { border-bottom: 0; }
+.events .meta { color: var(--muted); font-size: 12px; }
+.badge { font-size: 11px; border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; margin-left: 4px; color: var(--ink-2); }
+.badge.own { color: var(--own); border-color: var(--own); }
+.empty { color: var(--muted); font-size: 14px; padding: 12px 0; }
+.foot { color: var(--muted); font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>우리집 시세</h1>
+    <span class="sub" id="updated">불러오는 중</span>
+  </header>
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <div id="view"></div>
+  <p class="foot">
+    국토교통부 실거래가 공개자료 기준, 전용 83~86㎡(84㎡ 타입)만 집계합니다. 해제 신고된 거래는 제외합니다.
+    실거래는 계약 후 최대 30일 안에 신고되므로 최근 한두 달은 건수가 적을 수 있습니다.
+    비교 단지는 같은 동과 인근 동에서 최근 2년간 84㎡ 매매가 많은 순으로 자동 선정됩니다.
+  </p>
+</main>
+<script>
+const params = new URLSearchParams(location.search);
+const DATA_URL = params.get("data") || "data/market.json";
+const state = { group: 0, kind: "매매", years: 3, hi: null };
+let DATA;
+
+const fmtWon = v => {
+  if (v == null || isNaN(v)) return "-";
+  v = Math.round(v);
+  const eok = Math.floor(v / 10000), rest = v % 10000;
+  if (eok && rest) return `${eok}억 ${rest.toLocaleString()}`;
+  return eok ? `${eok}억` : `${rest.toLocaleString()}만`;
+};
+const fmtEok = v => (v / 10000).toFixed(v % 10000 === 0 ? 0 : 1) + "억";
+const median = a => {
+  if (!a.length) return null;
+  const s = [...a].sort((x, y) => x - y), m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
+const ym = d => d.slice(0, 7);
+const addMonths = (key, n) => {
+  let [y, m] = key.split("-").map(Number);
+  m += n; y += Math.floor((m - 1) / 12); m = ((m - 1) % 12 + 12) % 12 + 1;
+  return `${y}-${String(m).padStart(2, "0")}`;
+};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+// 행: [거래일, 구분, 금액, 층, 전용면적, 해제]
+const rowsOf = (key, kind) => (DATA.trades[key] || []).filter(r => r[1] === kind && !r[5]);
+const today = () => new Date().toISOString().slice(0, 10);
+const monthsAgo = n => addMonths(ym(today()), -n);
+
+// 월별 중앙값(직전 3개월 거래를 묶어 거래가 드문 달의 튐을 줄인다)
+function monthlySeries(rows, from, to) {
+  const byMonth = {};
+  for (const r of rows) (byMonth[ym(r[0])] ||= []).push(r[2]);
+  const out = [];
+  for (let m = from; m <= to; m = addMonths(m, 1)) {
+    const win = [m, addMonths(m, -1), addMonths(m, -2)].flatMap(k => byMonth[k] || []);
+    out.push({ m, v: win.length ? median(win) : null, n: (byMonth[m] || []).length });
+  }
+  return out;
+}
+
+function windowMedian(rows, fromMonth, toMonth) {
+  return median(rows.filter(r => ym(r[0]) > fromMonth && ym(r[0]) <= toMonth).map(r => r[2]));
+}
+
+function stats(key, kind) {
+  const rows = rowsOf(key, kind), now = ym(today());
+  const recent = windowMedian(rows, monthsAgo(6), now);
+  const yearAgo = windowMedian(rows, monthsAgo(18), monthsAgo(12));
+  return {
+    rows, recent, yearAgo,
+    change: recent && yearAgo ? (recent / yearAgo - 1) * 100 : null,
+    last: rows[rows.length - 1],
+    count2y: rows.filter(r => ym(r[0]) > monthsAgo(24)).length,
+  };
+}
+
+const deltaHtml = (pct, suffix = "") => pct == null ? "" :
+  `<span class="delta ${pct > 0 ? "up" : pct < 0 ? "down" : ""}">${pct > 0 ? "▲" : pct < 0 ? "▼" : ""} ${Math.abs(pct).toFixed(1)}%${suffix}</span>`;
+
+function render() {
+  const g = DATA.groups[state.group];
+  const own = g.complexes.find(c => c.own);
+  const sale = stats(own.key, "매매"), jeon = stats(own.key, "전세");
+  const ratio = sale.recent && jeon.recent ? jeon.recent / sale.recent * 100 : null;
+  const groupKeys = new Set(g.complexes.map(c => c.key));
+  const events = (DATA.events || []).filter(e => groupKeys.has(e.key)).slice(0, 15);
+
+  document.getElementById("view").innerHTML = `
+    <section class="card">
+      <div class="title-row">
+        <div><h2>${esc(g.name)}</h2><div class="sub">${esc(g.region)}${g.completed ? ` · ${esc(g.completed)} 준공` : ""} · 전용 84㎡</div></div>
+        <a class="btn" href="${esc(g.naver_url)}" target="_blank" rel="noopener">네이버 부동산 호가 보기 ↗</a>
+      </div>
+      <div class="tiles">
+        <div class="tile"><div class="label">최근 매매</div><div class="value">${fmtWon(sale.last?.[2])}</div>
+          <div class="note">${sale.last ? `${sale.last[0].replaceAll("-", ".")} · ${sale.last[3]}층` : "거래 없음"}</div></div>
+        <div class="tile"><div class="label">매매 시세</div><div class="value">${fmtWon(sale.recent)}</div>
+          <div class="note">6개월 중앙값 · ${sale.change != null ? `1년 전보다 ${deltaHtml(sale.change)}` : "1년 전 거래 없음"}</div></div>
+        <div class="tile"><div class="label">전세 시세</div><div class="value">${fmtWon(jeon.recent)}</div>
+          <div class="note">6개월 중앙값 · ${jeon.change != null ? `1년 전보다 ${deltaHtml(jeon.change)}` : "1년 전 거래 없음"}</div></div>
+        <div class="tile"><div class="label">전세가율</div><div class="value">${ratio ? ratio.toFixed(0) + "%" : "-"}</div>
+          <div class="note">전세 ÷ 매매 (6개월 중앙값)</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="title-row"><h2 style="font-size:16px">인근 단지와 비교</h2></div>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="거래 구분">${["매매", "전세"].map(k => `<button data-kind="${k}" aria-pressed="${state.kind === k}">${k}</button>`).join("")}</div>
+        <div class="seg" role="group" aria-label="기간">${[1, 3, 5].map(y => `<button data-years="${y}" aria-pressed="${state.years === y}">${y}년</button>`).join("")}</div>
+      </div>
+      <div class="chart-wrap" id="chart"></div>
+      <div class="legend"><span><i style="background:var(--own)"></i>${esc(own.name)} (보유)</span>
+        <span><i class="dot" style="background:var(--own)"></i>개별 거래</span>
+        <span><i style="background:var(--other)"></i>인근 단지 (표의 행을 누르면 강조)</span></div>
+      <div class="scroll" style="margin-top:14px"><table id="cmp"></table></div>
+    </section>
+
+    <section class="card">
+      <h2 style="font-size:16px">새로 신고된 거래</h2>
+      ${events.length ? `<ul class="events">${events.map(e => `
+        <li><div>${esc(e.name)}${e.own ? '<span class="badge own">보유</span>' : ""}<span class="badge">${e.kind}</span>${e.cancelled ? '<span class="badge">해제</span>' : ""}
+          <div class="meta">거래일 ${e.date.replaceAll("-", ".")} · ${e.floor}층 · ${e.found.replaceAll("-", ".")} 확인</div></div>
+          <div style="font-variant-numeric:tabular-nums">${fmtWon(e.price)}</div></li>`).join("")}</ul>`
+        : `<div class="empty">아직 없습니다. 매일 아침 수집할 때 새로 신고된 거래가 있으면 여기에 쌓이고 GitHub 알림으로도 보내 드립니다.</div>`}
+    </section>`;
+
+  document.querySelectorAll("[data-kind]").forEach(b => b.onclick = () => { state.kind = b.dataset.kind; render(); });
+  document.querySelectorAll("[data-years]").forEach(b => b.onclick = () => { state.years = +b.dataset.years; render(); });
+  renderTable(g);
+  renderChart(g);
+}
+
+function renderTable(g) {
+  const rows = g.complexes.map(c => ({ c, s: stats(c.key, state.kind) }));
+  document.getElementById("cmp").innerHTML = `
+    <thead><tr><th>단지</th><th>시세<div class="sub">6개월 중앙값</div></th><th>1년 변동</th><th>최근 거래</th><th class="col-n">2년 거래</th></tr></thead>
+    <tbody>${rows.map(({ c, s }) => `
+      <tr data-key="${esc(c.key)}" class="${c.own ? "own" : ""} ${state.hi === c.key ? "hi" : ""}">
+        <td>${esc(c.name)}<div class="sub">${esc(c.umd)}</div></td>
+        <td>${fmtWon(s.recent)}</td>
+        <td>${deltaHtml(s.change) || "-"}</td>
+        <td>${s.last ? `${fmtWon(s.last[2])}<div class="sub">${s.last[0].slice(2).replaceAll("-", ".")}</div>` : "-"}</td>
+        <td class="col-n">${s.count2y}건</td></tr>`).join("")}</tbody>`;
+  document.querySelectorAll("#cmp tbody tr").forEach(tr => tr.onclick = () => {
+    const k = tr.dataset.key;
+    state.hi = state.hi === k || g.complexes.find(c => c.key === k).own ? null : k;
+    renderTable(g); renderChart(g);
+  });
+}
+
+function renderChart(g) {
+  const box = document.getElementById("chart");
+  const W = Math.max(320, box.clientWidth), H = W < 520 ? 240 : 300;
+  const M = { l: 44, r: 12, t: 10, b: 24 };
+  const to = ym(today()), from = addMonths(to, -12 * state.years + 1);
+  const series = g.complexes.map(c => ({ c, pts: monthlySeries(rowsOf(c.key, state.kind), from, to) }));
+  const own = series.find(s => s.c.own);
+  const dots = rowsOf(own.c.key, state.kind).filter(r => ym(r[0]) >= from);
+  const vals = series.flatMap(s => s.pts.map(p => p.v)).concat(dots.map(r => r[2])).filter(v => v != null);
+  if (!vals.length) { box.innerHTML = `<div class="empty">이 기간에 ${state.kind} 거래가 없습니다.</div>`; return; }
+
+  // y축: 1억 단위(범위가 좁으면 5천만) 눈금
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const step = hi - lo > 40000 ? 10000 : 5000;
+  lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+  if (lo === hi) hi += step;
+  const months = own.pts.map(p => p.m);
+  const dayX = d => { // 거래일을 월 안의 위치까지 반영
+    const i = months.indexOf(ym(d)); return x(i + (+d.slice(8, 10) - 1) / 31 - 0.5);
+  };
+  const x = i => M.l + (W - M.l - M.r) * (months.length > 1 ? i / (months.length - 1) : 0.5);
+  const y = v => M.t + (H - M.t - M.b) * (1 - (v - lo) / (hi - lo));
+
+  const path = pts => {
+    let d = "", pen = false;
+    pts.forEach((p, i) => { if (p.v == null) { pen = false; return; } d += `${pen ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`; pen = true; });
+    return d;
+  };
+  const yTicks = []; for (let v = lo; v <= hi + 1; v += step) yTicks.push(v);
+  const xTicks = months.map((m, i) => ({ m, i })).filter(t => t.m.endsWith(state.years === 1 ? "" : "-01") && (state.years > 1 || +t.m.slice(5) % 3 === 1));
+
+  const others = series.filter(s => !s.c.own);
+  const hiS = others.find(s => s.c.key === state.hi);
+  box.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(g.name)}와 인근 단지 ${state.kind} 월별 중앙값 추이">
+      ${yTicks.map(v => `<line x1="${M.l}" x2="${W - M.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/>
+        <text x="${M.l - 6}" y="${y(v) + 4}" text-anchor="end">${fmtEok(v)}</text>`).join("")}
+      <line x1="${M.l}" x2="${W - M.r}" y1="${H - M.b}" y2="${H - M.b}" stroke="var(--axis)"/>
+      ${xTicks.map(t => `<text x="${x(t.i)}" y="${H - 6}" text-anchor="middle">${state.years === 1 ? +t.m.slice(5) + "월" : t.m.slice(0, 4)}</text>`).join("")}
+      ${others.filter(s => s !== hiS).map(s => `<path d="${path(s.pts)}" fill="none" stroke="var(--other)" stroke-width="1.5" stroke-linejoin="round"/>`).join("")}
+      ${hiS ? `<path d="${path(hiS.pts)}" fill="none" stroke="var(--other-hi)" stroke-width="2" stroke-dasharray="5 3" stroke-linejoin="round"/>` : ""}
+      ${dots.map(r => `<circle cx="${dayX(r[0]).toFixed(1)}" cy="${y(r[2]).toFixed(1)}" r="3.5" fill="var(--own)" fill-opacity="0.3"/>`).join("")}
+      <path d="${path(own.pts)}" fill="none" stroke="var(--surface)" stroke-width="5" stroke-linejoin="round"/>
+      <path d="${path(own.pts)}" fill="none" stroke="var(--own)" stroke-width="2.5" stroke-linejoin="round"/>
+      <line id="xh" y1="${M.t}" y2="${H - M.b}" stroke="var(--axis)" visibility="hidden"/>
+      <circle id="xo" r="4.5" fill="var(--own)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/>
+      <rect x="${M.l}" y="0" width="${W - M.l - M.r}" height="${H}" fill="transparent" id="hit"/>
+    </svg><div class="tip" id="tip"></div>`;
+
+  const svg = box.querySelector("svg"), tip = box.querySelector("#tip");
+  const xh = svg.querySelector("#xh"), xo = svg.querySelector("#xo");
+  const move = ev => {
+    const pt = svg.getBoundingClientRect(), scale = W / pt.width;
+    const px = (ev.clientX - pt.left) * scale;
+    const i = Math.max(0, Math.min(months.length - 1, Math.round((px - M.l) / (W - M.l - M.r) * (months.length - 1))));
+    xh.setAttribute("x1", x(i)); xh.setAttribute("x2", x(i)); xh.setAttribute("visibility", "visible");
+    const ov = own.pts[i].v;
+    if (ov != null) { xo.setAttribute("cx", x(i)); xo.setAttribute("cy", y(ov)); xo.setAttribute("visibility", "visible"); }
+    else xo.setAttribute("visibility", "hidden");
+    const lines = series.map(s => ({ s, v: s.pts[i].v })).filter(o => o.v != null).sort((a, b) => b.v - a.v);
+    tip.innerHTML = `<b>${months[i].replace("-", ".")}</b>` + (lines.length ? lines.map(o =>
+      `<div class="r ${o.s.c.own ? "own" : ""}"><span>${esc(o.s.c.name)}</span><span>${fmtWon(o.v)}</span></div>`).join("")
+      : `<div class="r">거래 없음</div>`) + (own.pts[i].n ? `<div class="r" style="margin-top:4px">보유 단지 이달 거래 ${own.pts[i].n}건</div>` : "");
+    tip.style.display = "block";
+    const left = x(i) / scale, tw = tip.offsetWidth;
+    tip.style.left = Math.min(Math.max(0, left + 12 + tw > pt.width ? left - tw - 12 : left + 12), pt.width - tw) + "px";
+    tip.style.top = "8px";
+  };
+  const hide = () => { tip.style.display = "none"; xh.setAttribute("visibility", "hidden"); xo.setAttribute("visibility", "hidden"); };
+  const hit = svg.querySelector("#hit");
+  hit.addEventListener("pointermove", move); hit.addEventListener("pointerdown", move);
+  hit.addEventListener("pointerleave", hide);
+}
+
+function renderTabs() {
+  document.getElementById("tabs").innerHTML = DATA.groups.map((g, i) =>
+    `<button class="tab" role="tab" data-i="${i}" aria-selected="${i === state.group}">${esc(g.name)}</button>`).join("");
+  document.querySelectorAll(".tab").forEach(b => b.onclick = () => {
+    state.group = +b.dataset.i; state.hi = null; renderTabs(); render();
+    try { localStorage.setItem("apt-tab", state.group); } catch {}
+  });
+}
+
+fetch(DATA_URL, { cache: "no-cache" })
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d => {
+    DATA = d;
+    try { const t = +localStorage.getItem("apt-tab"); if (t < d.groups.length) state.group = t; } catch {}
+    document.getElementById("updated").textContent = `${d.updated.slice(0, 10).replaceAll("-", ".")} ${d.updated.slice(11, 16)} 갱신`;
+    renderTabs(); render();
+    let w = innerWidth;
+    addEventListener("resize", () => { if (innerWidth !== w) { w = innerWidth; renderChart(DATA.groups[state.group]); } });
+  })
+  .catch(() => {
+    document.getElementById("updated").textContent = "";
+    document.getElementById("view").innerHTML = `<div class="card empty">아직 수집된 데이터가 없습니다. GitHub Actions의 「실거래가 수집」이 한 번 실행되면 표시됩니다.</div>`;
+  });
+</script>
+</body>
+</html>
