@@ -46,7 +46,7 @@ class Complex:
     def naver_url(self) -> str:
         if self.naver_complex_id:
             return f"https://new.land.naver.com/complexes/{self.naver_complex_id}"
-        return f"https://m.land.naver.com/search/result/{self.region.split()[0]} {self.name}"
+        return f"https://m.land.naver.com/search/result/{self.name}"
 
 
 def load_complexes(path: Path | str = Path(__file__).parent / "complexes.json") -> list[Complex]:
