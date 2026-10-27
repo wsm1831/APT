@@ -141,6 +141,11 @@ dialog#hist::backdrop { background: rgba(0,0,0,0.4); }
 .hist-body table { font-size: 13px; }
 .hist-body td, .hist-body th { padding: 7px 4px; }
 .hist-body th:first-child, .hist-body td:first-child { min-width: 0; }
+#hist-filters .chips { margin-top: 8px; overflow-x: auto; scrollbar-width: none; }
+#hist-filters .chips::-webkit-scrollbar { display: none; }
+#hist-filters .chips button { flex: none; }
+#hist-filters .chips button .sub { font-size: 11px; }
+#hist-filters .chips button[aria-pressed="true"] .sub { color: inherit; opacity: .75; }
 tr.cancel td { color: var(--muted); }
 tr.cancel td.price { text-decoration: line-through; }
 .tag { font-size: 11px; color: var(--ink-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; margin-left: 3px; white-space: nowrap; }
@@ -165,6 +170,7 @@ tr.cancel td.price { text-decoration: line-through; }
     <div class="top"><div><h3 id="hist-title"></h3><div class="sub" id="hist-sub"></div></div>
       <button class="close" aria-label="닫기" id="hist-close">✕</button></div>
     <div class="seg" role="group" aria-label="거래 구분" id="hist-kind"></div>
+    <div id="hist-filters"></div>
   </div>
   <div class="hist-body"><table id="hist-table"></table></div>
 </dialog>
@@ -397,7 +403,7 @@ function renderChart(g) {
 }
 
 // ---------- 단지별 실거래 내역 ----------
-const hist = { key: null, kind: "매매" };
+const hist = { key: null, kind: "매매", floor: "", dong: "" };
 const shortDate = d => d ? d.slice(2).replaceAll("-", ".") : "";
 
 function bindHistButtons(root) {
@@ -405,7 +411,7 @@ function bindHistButtons(root) {
 }
 
 function openHistory(key) {
-  hist.key = key; hist.kind = state.kind;
+  hist.key = key; hist.kind = state.kind; hist.floor = ""; hist.dong = "";
   const c = DATA.groups.flatMap(g => g.complexes).find(c => c.key === key);
   document.getElementById("hist-title").textContent = c.name + (c.own ? " (보유)" : "");
   renderHistory();
@@ -414,25 +420,55 @@ function openHistory(key) {
   dlg.querySelector(".hist-body").scrollTop = 0;
 }
 
+const dongOf = r => r[6] ? r[6].replace(/동$/, "") : "";
+
+// 층 구분: 이 단지 거래에서 확인된 최고층을 3등분한다 (예: 최고 22층 → 저층 1~7, 중층 8~14, 고층 15~22)
+function floorBands(key) {
+  const top = Math.max(1, ...(DATA.trades[key] || []).map(r => r[3]));
+  const lo = Math.max(1, Math.floor(top / 3)), mid = Math.max(lo + 1, Math.floor(top * 2 / 3));
+  return [
+    { id: "low", label: "저층", from: -99, to: lo, text: `${lo}층 이하` },
+    { id: "mid", label: "중층", from: lo + 1, to: mid, text: `${lo + 1}~${mid}층` },
+    { id: "high", label: "고층", from: mid + 1, to: 999, text: `${mid + 1}층 이상` },
+  ];
+}
+
+const chips = (id, items, current) => `<div class="seg chips" role="group" id="${id}">${items.map(([v, label]) =>
+  `<button data-v="${esc(v)}" aria-pressed="${current === v}">${label}</button>`).join("")}</div>`;
+
 function renderHistory() {
   // 해제된 거래도 취소선으로 함께 보여 준다
   const all = (DATA.trades[hist.key] || []).filter(r => r[1] === hist.kind).slice().reverse();
-  const sale = hist.kind === "매매";
-  document.getElementById("hist-sub").textContent =
-    `전용 84㎡ ${hist.kind} ${all.length}건` + (sale ? " · 동은 등기 후 공개" : "");
+  const sale = hist.kind === "매매";  // 전월세 자료에는 동이 없어 동 필터·칸은 매매에서만 보인다
+  const bands = floorBands(hist.key);
+  const dongs = [...new Set(all.map(dongOf).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko", { numeric: true }));
+  if (!sale || (hist.dong !== "" && hist.dong !== "none" && !dongs.includes(hist.dong))) hist.dong = "";
+  const band = bands.find(b => b.id === hist.floor);
+  const rows = all.filter(r =>
+    (!hist.dong || (hist.dong === "none" ? !dongOf(r) : dongOf(r) === hist.dong)) &&
+    (!band || (r[3] >= band.from && r[3] <= band.to)));
+  const valid = rows.filter(r => !r[5]).map(r => r[2]);
+
   document.getElementById("hist-kind").innerHTML = ["매매", "전세"].map(k =>
     `<button data-k="${k}" aria-pressed="${hist.kind === k}">${k}</button>`).join("");
   document.querySelectorAll("#hist-kind button").forEach(b => b.onclick = () => { hist.kind = b.dataset.k; renderHistory(); });
-  document.getElementById("hist-table").innerHTML = all.length ? `
-    <thead><tr><th>계약일</th>${sale ? "<th>등기일</th>" : ""}<th>동</th><th>층</th><th>가격</th></tr></thead>
-    <tbody>${all.map(r => `<tr class="${r[5] ? "cancel" : ""}">
+  document.getElementById("hist-filters").innerHTML =
+    chips("hist-floor", [["", "전체 층"], ...bands.map(b => [b.id, `${b.label} <span class="sub">${b.text}</span>`])], hist.floor) +
+    (sale && dongs.length ? chips("hist-dong", [["", "전체 동"], ...dongs.map(d => [d, d + "동"]), ["none", "동 미공개"]], hist.dong) : "");
+  document.querySelectorAll("#hist-floor button").forEach(b => b.onclick = () => { hist.floor = b.dataset.v; renderHistory(); });
+  document.querySelectorAll("#hist-dong button").forEach(b => b.onclick = () => { hist.dong = b.dataset.v; renderHistory(); });
+
+  document.getElementById("hist-sub").textContent = `전용 84㎡ ${hist.kind} ${rows.length}건` +
+    (valid.length ? ` · 중앙값 ${fmtWon(median(valid))}` : "") + (sale ? " · 동은 등기 후 공개" : "");
+  document.getElementById("hist-table").innerHTML = rows.length ? `
+    <thead><tr><th>계약일</th>${sale ? "<th>등기일</th><th>동</th>" : ""}<th>층</th><th>가격</th></tr></thead>
+    <tbody>${rows.map(r => `<tr class="${r[5] ? "cancel" : ""}">
       <td>${shortDate(r[0])}</td>
-      ${sale ? `<td>${shortDate(r[7])}</td>` : ""}
-      <td>${r[6] ? esc(r[6].replace(/동$/, "")) + "동" : '<span class="sub">-</span>'}</td>
+      ${sale ? `<td>${shortDate(r[7])}</td><td>${dongOf(r) ? esc(dongOf(r)) + "동" : '<span class="sub">-</span>'}</td>` : ""}
       <td>${r[3]}</td>
       <td class="price">${fmtWon(r[2])}${r[5] ? '<span class="tag">해제</span>' : ""}${r[8] ? '<span class="tag">직거래</span>' : ""}</td>
     </tr>`).join("")}</tbody>`
-    : `<tbody><tr><td class="empty">${hist.kind} 거래가 없습니다.</td></tr></tbody>`;
+    : `<tbody><tr><td class="empty">조건에 맞는 ${hist.kind} 거래가 없습니다.</td></tr></tbody>`;
 }
 
 {
