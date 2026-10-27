@@ -1,4 +1,4 @@
-"""보유 단지와 인근 단지의 전용 84㎡ 실거래(매매, 전세)를 모아 대시보드용 JSON으로 저장한다.
+"""기준 단지와 비교 단지의 전용 84㎡ 실거래(매매, 전세)를 모아 대시보드용 JSON으로 저장한다.
 
 GitHub Actions에서 매일 실행된다. 인증키는 환경변수 DATA_GO_KR_KEY(또는 RTMS_SERVICE_KEY).
 
@@ -138,7 +138,7 @@ def alert_markdown(events: list[dict], dashboard_url: str) -> str:
     lines = [f"새로 신고된 84㎡ 실거래 {len(events)}건입니다.", ""]
     lines += ["| 단지 | 구분 | 거래일 | 금액 | 층 | 비고 |", "|---|---|---|---|---|---|"]
     for e in events:
-        name = f"**{e['name']}** (보유)" if e["own"] else e["name"]
+        name = f"**{e['name']}**" if e["own"] else e["name"]
         lines.append(f"| {name} | {e['kind']} | {e['date']} | {fmt_won(e['price'])} | {e['floor']} | {'해제' if e['cancelled'] else ''} |")
     if dashboard_url:
         lines += ["", f"대시보드: {dashboard_url}"]

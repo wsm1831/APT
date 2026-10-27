@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>우리집 시세</title>
+<title>대구 아파트 시세</title>
 <style>
 :root {
   color-scheme: light;
@@ -166,7 +166,7 @@ tr.cancel td.price { text-decoration: line-through; }
 <body>
 <main>
   <header>
-    <h1>우리집 시세</h1>
+    <h1>대구 아파트 시세</h1>
     <span class="sub" id="updated">불러오는 중</span>
   </header>
   <nav class="tabs" id="tabs" role="tablist"></nav>
@@ -297,7 +297,7 @@ function render() {
         <div class="seg" role="group" aria-label="기간">${[1, 3, 5].map(y => `<button data-years="${y}" aria-pressed="${state.years === y}">${y}년</button>`).join("")}</div>
       </div>
       <div class="chart-wrap" id="chart"></div>
-      <div class="legend"><span><i style="background:var(--own)"></i>${esc(own.name)} (보유)</span>
+      <div class="legend"><span><i style="background:var(--own)"></i>${esc(own.name)}</span>
         <span><i class="dot" style="background:var(--own)"></i>개별 거래</span>
         <span><i style="background:var(--other)"></i>비교 단지 (표의 행을 누르면 강조)</span></div>
       <div class="scroll" style="margin-top:14px"><table id="cmp"></table></div>
@@ -306,7 +306,7 @@ function render() {
     <section class="card">
       <h2 style="font-size:16px">새로 신고된 거래</h2>
       ${events.length ? `<ul class="events">${events.map(e => `
-        <li><div>${esc(e.name)}${e.own ? '<span class="badge own">보유</span>' : ""}<span class="badge">${e.kind}</span>${e.cancelled ? '<span class="badge">해제</span>' : ""}
+        <li><div>${e.own ? `<b>${esc(e.name)}</b>` : esc(e.name)}<span class="badge">${e.kind}</span>${e.cancelled ? '<span class="badge">해제</span>' : ""}
           <div class="meta">거래일 ${e.date.replaceAll("-", ".")} · ${e.floor}층 · ${e.found.replaceAll("-", ".")} 확인</div></div>
           <div style="font-variant-numeric:tabular-nums">${fmtWon(e.price)}</div></li>`).join("")}</ul>`
         : `<div class="empty">아직 없습니다. 매일 아침 수집할 때 새로 신고된 거래가 있으면 여기에 쌓이고 GitHub 알림으로도 보내 드립니다.</div>`}
@@ -402,7 +402,7 @@ function renderChart(g) {
     const lines = series.map(s => ({ s, v: s.pts[i].v })).filter(o => o.v != null).sort((a, b) => b.v - a.v);
     tip.innerHTML = `<b>${months[i].replace("-", ".")}</b>` + (lines.length ? lines.map(o =>
       `<div class="r ${o.s.c.own ? "own" : ""}"><span>${esc(o.s.c.name)}</span><span>${fmtWon(o.v)}</span></div>`).join("")
-      : `<div class="r">거래 없음</div>`) + (own.pts[i].n ? `<div class="r" style="margin-top:4px">보유 단지 이달 거래 ${own.pts[i].n}건</div>` : "");
+      : `<div class="r">거래 없음</div>`) + (own.pts[i].n ? `<div class="r" style="margin-top:4px">${esc(own.c.name)} 이달 거래 ${own.pts[i].n}건</div>` : "");
     tip.style.display = "block";
     const left = x(i) / scale, tw = tip.offsetWidth;
     tip.style.left = Math.min(Math.max(0, left + 12 + tw > pt.width ? left - tw - 12 : left + 12), pt.width - tw) + "px";
@@ -427,7 +427,7 @@ function bindHistButtons(root) {
 function openHistory(key) {
   hist.key = key; hist.kind = state.kind; hist.floor = ""; hist.dong = "";
   const c = DATA.groups.flatMap(g => g.complexes).find(c => c.key === key);
-  document.getElementById("hist-title").textContent = c.name + (c.own ? " (보유)" : "");
+  document.getElementById("hist-title").textContent = c.name;
   renderHistory();
   const dlg = document.getElementById("hist");
   dlg.showModal();

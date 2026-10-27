@@ -4,7 +4,7 @@
 
 ## 매일 자동 수집 + 대시보드 (휴대폰용)
 
-`collect.py`가 GitHub Actions에서 매일 오전 7시경 실행되어 보유 단지와 인근 단지의 **전용 84㎡ 매매·전세 실거래**를 모읍니다.
+`collect.py`가 GitHub Actions에서 매일 오전 7시경 실행되어 기준 단지와 비교 단지의 **전용 84㎡ 매매·전세 실거래**를 모읍니다.
 
 - 결과: `docs/data/market.json` → 대시보드 `docs/index.html`(GitHub Pages)에서 확인
 - 새로 신고된 거래가 있으면 이슈를 만들어 GitHub 알림(앱·메일)을 보냅니다
