@@ -106,7 +106,13 @@ table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th, td { padding: 8px 6px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; font-variant-numeric: tabular-nums; }
 th { color: var(--ink-2); font-weight: 500; font-size: 12px; }
 th:first-child, td:first-child { text-align: left; white-space: normal; min-width: 8.5em; }
-@media (max-width: 520px) { .col-n { display: none; } th, td { padding: 8px 4px; } }
+@media (max-width: 520px) {
+  .col-n { display: none; }
+  table { font-size: 13px; }
+  th, td { padding: 8px 3px; }
+  th:first-child, td:first-child { min-width: 6.5em; }
+  .delta { font-size: 12px; }
+}
 tbody tr { cursor: pointer; }
 tbody tr.own td { font-weight: 600; }
 tbody tr.own td:first-child { box-shadow: inset 3px 0 0 var(--own); padding-left: 10px; }
@@ -260,10 +266,10 @@ function renderTable(g) {
     <tbody>${rows.map(({ c, s }) => `
       <tr data-key="${esc(c.key)}" class="${c.own ? "own" : ""} ${state.hi === c.key ? "hi" : ""}">
         <td>${esc(c.name)}<div class="sub">${esc(c.umd)}</div></td>
-        <td>${fmtWon(s.recent)}</td>
+        ${s.rows.length ? `<td>${fmtWon(s.recent)}</td>
         <td>${deltaHtml(s.change) || "-"}</td>
         <td>${s.last ? `${fmtWon(s.last[2])}<div class="sub">${s.last[0].slice(2).replaceAll("-", ".")}</div>` : "-"}</td>
-        <td class="col-n">${s.count2y}건</td></tr>`).join("")}</tbody>`;
+        <td class="col-n">${s.count2y}건</td>` : `<td colspan="4" class="sub" style="text-align:left;white-space:normal">84㎡ ${state.kind} 실거래 없음. 신축은 등기 전까지 분양권·입주권 거래로 신고되어 아직 잡히지 않을 수 있습니다.</td>`}</tr>`).join("")}</tbody>`;
   document.querySelectorAll("#cmp tbody tr").forEach(tr => tr.onclick = () => {
     const k = tr.dataset.key;
     state.hi = state.hi === k || g.complexes.find(c => c.key === k).own ? null : k;
