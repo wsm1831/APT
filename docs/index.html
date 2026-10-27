@@ -88,7 +88,8 @@ a.btn { color: var(--own); font-size: 14px; text-decoration: none; border: 1px s
 .controls { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 8px; }
 .seg { display: flex; gap: 4px; }
 .seg button { padding: 4px 12px; font-size: 13px; }
-.chart-wrap { position: relative; }
+/* 그래프를 누르고 끌 때 글자 선택·길게 누르기 메뉴가 뜨지 않게 하고, 좌우 드래그는 툴팁, 위아래는 스크롤로 쓴다 */
+.chart-wrap { position: relative; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: pan-y; }
 svg { display: block; width: 100%; height: auto; overflow: visible; }
 svg text { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
 .tip {
@@ -146,6 +147,8 @@ const params = new URLSearchParams(location.search);
 const DATA_URL = params.get("data") || "data/market.json";
 const state = { group: 0, kind: "매매", years: 3, hi: null };
 let DATA;
+let hideTip = () => {};
+document.addEventListener("pointerdown", e => { if (!e.target.closest(".chart-wrap")) hideTip(); });
 
 const fmtWon = v => {
   if (v == null || isNaN(v)) return "-";
@@ -348,7 +351,9 @@ function renderChart(g) {
   const hide = () => { tip.style.display = "none"; xh.setAttribute("visibility", "hidden"); xo.setAttribute("visibility", "hidden"); };
   const hit = svg.querySelector("#hit");
   hit.addEventListener("pointermove", move); hit.addEventListener("pointerdown", move);
-  hit.addEventListener("pointerleave", hide);
+  // 터치는 손을 떼도 툴팁을 남겨 두고, 그래프 밖을 누르면 닫는다
+  hit.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") hide(); });
+  hideTip = hide;
 }
 
 function renderTabs() {
