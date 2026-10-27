@@ -538,11 +538,8 @@ function renderChart(g) {
       ${dots.map(r => `<circle cx="${dayX(r[0]).toFixed(1)}" cy="${y(r[2]).toFixed(1)}" r="3.5" fill="var(--own)" fill-opacity="0.3"/>`).join("")}
       <path d="${path(own.pts)}" fill="none" stroke="var(--surface)" stroke-width="5" stroke-linejoin="round"/>
       <path d="${path(own.pts)}" fill="none" stroke="var(--own)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-      ${own.pts.map((p, i) => p.v == null ? "" : p.n
-        ? `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="3" fill="var(--own)" stroke="var(--surface)" stroke-width="1.5"/>`
-        : `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="2.5" fill="var(--surface)" stroke="var(--own)" stroke-width="1.5"/>`).join("")}
       <line id="xh" y1="${M.t}" y2="${H - M.b}" stroke="var(--axis)" visibility="hidden"/>
-      <circle id="xo" r="4.5" fill="var(--own)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/>
+      <g id="xo"></g>
       <rect x="${M.l}" y="0" width="${W - M.l - M.r}" height="${H}" fill="transparent" id="hit"/>
     </svg><div class="tip" id="tip"></div>`;
 
@@ -553,9 +550,13 @@ function renderChart(g) {
     const px = (ev.clientX - pt.left) * scale;
     const i = Math.max(0, Math.min(months.length - 1, Math.round((px - M.l) / (W - M.l - M.r) * (months.length - 1))));
     xh.setAttribute("x1", x(i)); xh.setAttribute("x2", x(i)); xh.setAttribute("visibility", "visible");
-    const ov = own.pts[i].v;
-    if (ov != null) { xo.setAttribute("cx", x(i)); xo.setAttribute("cy", y(ov)); xo.setAttribute("visibility", "visible"); }
-    else xo.setAttribute("visibility", "hidden");
+    // 고른 달에만 각 선 위에 동그라미를 찍는다. 기준 단지는 맨 위에 파란색, 0건(직전 가격)은 속이 빈 원
+    xo.innerHTML = [...series.filter(s => !s.c.own), own].map(s => {
+      const p = s.pts[i];
+      if (p.v == null) return "";
+      const color = s.c.own ? "var(--own)" : s === hiS ? "var(--other-hi)" : "var(--other)";
+      return `<circle cx="${x(i)}" cy="${y(p.v)}" r="${s.c.own ? 4.5 : 3.5}" fill="${p.n ? color : "var(--surface)"}" stroke="${p.n ? "var(--surface)" : color}" stroke-width="2"/>`;
+    }).join("");
     const lines = series.map(s => ({ s, v: s.pts[i].v })).filter(o => o.v != null).sort((a, b) => b.v - a.v);
     tip.innerHTML = `<b>${months[i].replace("-", ".")}</b>` + (lines.length ? lines.map(o =>
       `<div class="r ${o.s.c.own ? "own" : ""}"><span>${esc(o.s.c.name)}</span><span>${fmtWon(o.v)} <span class="sub">${o.s.pts[i].n}건</span></span></div>`).join("")
@@ -565,7 +566,7 @@ function renderChart(g) {
     tip.style.left = Math.min(Math.max(0, left + 12 + tw > pt.width ? left - tw - 12 : left + 12), pt.width - tw) + "px";
     tip.style.top = "8px";
   };
-  const hide = () => { tip.style.display = "none"; xh.setAttribute("visibility", "hidden"); xo.setAttribute("visibility", "hidden"); };
+  const hide = () => { tip.style.display = "none"; xh.setAttribute("visibility", "hidden"); xo.innerHTML = ""; };
   const hit = svg.querySelector("#hit");
   hit.addEventListener("pointermove", move); hit.addEventListener("pointerdown", move);
   // 터치는 손을 떼도 툴팁을 남겨 두고, 그래프 밖을 누르면 닫는다
