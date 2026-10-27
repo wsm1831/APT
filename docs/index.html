@@ -145,7 +145,7 @@ tbody tr.hi { background: var(--own-wash); }
 <script>
 const params = new URLSearchParams(location.search);
 const DATA_URL = params.get("data") || "data/market.json";
-const state = { group: 0, kind: "매매", years: 3, hi: null };
+const state = { group: 0, kind: "매매", years: 1, hi: null };
 let DATA;
 let hideTip = () => {};
 document.addEventListener("pointerdown", e => { if (!e.target.closest(".chart-wrap")) hideTip(); });
@@ -192,17 +192,26 @@ function windowMedian(rows, fromMonth, toMonth) {
   return median(rows.filter(r => ym(r[0]) > fromMonth && ym(r[0]) <= toMonth).map(r => r[2]));
 }
 
+// 단기 흐름을 보려고 최근 3개월 중앙값을 시세로 쓰고, 직전 3개월·1년 전 같은 3개월과 비교한다.
+// 1개월은 거래가 몇 건뿐이고 신고가 최대 30일 늦어 너무 흔들린다.
 function stats(key, kind) {
   const rows = rowsOf(key, kind), now = ym(today());
-  const recent = windowMedian(rows, monthsAgo(6), now);
-  const yearAgo = windowMedian(rows, monthsAgo(18), monthsAgo(12));
+  const inWindow = (from, to) => rows.filter(r => ym(r[0]) > from && ym(r[0]) <= to);
+  const recentRows = inWindow(monthsAgo(3), now);
+  const recent = median(recentRows.map(r => r[2]));
+  const prev = windowMedian(rows, monthsAgo(6), monthsAgo(3));
+  const yearAgo = windowMedian(rows, monthsAgo(15), monthsAgo(12));
+  const pct = base => recent && base ? (recent / base - 1) * 100 : null;
   return {
-    rows, recent, yearAgo,
-    change: recent && yearAgo ? (recent / yearAgo - 1) * 100 : null,
+    rows, recent, prev, yearAgo,
+    change3m: pct(prev), change1y: pct(yearAgo),
+    count3m: recentRows.length,
     last: rows[rows.length - 1],
-    count2y: rows.filter(r => ym(r[0]) > monthsAgo(24)).length,
   };
 }
+
+const trendNote = s => s.recent == null ? "최근 3개월 거래 없음" :
+  `최근 3개월 중앙값 · ${s.count3m}건${s.count3m < 3 ? " (거래가 적어 참고만)" : ""}<br>직전 3개월보다 ${deltaHtml(s.change3m) || "-"}<br>1년 전보다 ${deltaHtml(s.change1y) || "-"}`;
 
 const deltaHtml = (pct, suffix = "") => pct == null ? "" :
   `<span class="delta ${pct > 0 ? "up" : pct < 0 ? "down" : ""}">${pct > 0 ? "▲" : pct < 0 ? "▼" : ""} ${Math.abs(pct).toFixed(1)}%${suffix}</span>`;
@@ -225,11 +234,11 @@ function render() {
         <div class="tile"><div class="label">최근 매매</div><div class="value">${fmtWon(sale.last?.[2])}</div>
           <div class="note">${sale.last ? `${sale.last[0].replaceAll("-", ".")} · ${sale.last[3]}층` : "거래 없음"}</div></div>
         <div class="tile"><div class="label">매매 시세</div><div class="value">${fmtWon(sale.recent)}</div>
-          <div class="note">6개월 중앙값 · ${sale.change != null ? `1년 전보다 ${deltaHtml(sale.change)}` : "1년 전 거래 없음"}</div></div>
+          <div class="note">${trendNote(sale)}</div></div>
         <div class="tile"><div class="label">전세 시세</div><div class="value">${fmtWon(jeon.recent)}</div>
-          <div class="note">6개월 중앙값 · ${jeon.change != null ? `1년 전보다 ${deltaHtml(jeon.change)}` : "1년 전 거래 없음"}</div></div>
+          <div class="note">${trendNote(jeon)}</div></div>
         <div class="tile"><div class="label">전세가율</div><div class="value">${ratio ? ratio.toFixed(0) + "%" : "-"}</div>
-          <div class="note">전세 ÷ 매매 (6개월 중앙값)</div></div>
+          <div class="note">전세 ÷ 매매 (3개월 중앙값)</div></div>
       </div>
     </section>
 
@@ -265,14 +274,15 @@ function render() {
 function renderTable(g) {
   const rows = g.complexes.map(c => ({ c, s: stats(c.key, state.kind) }));
   document.getElementById("cmp").innerHTML = `
-    <thead><tr><th>단지</th><th>시세<div class="sub">6개월 중앙값</div></th><th>1년 변동</th><th>최근 거래</th><th class="col-n">2년 거래</th></tr></thead>
+    <thead><tr><th>단지</th><th>시세<div class="sub">3개월 중앙값</div></th><th>직전 3개월<div class="sub">대비</div></th><th class="col-n">1년 전<div class="sub">대비</div></th><th>최근 거래</th><th class="col-n">3개월<div class="sub">거래</div></th></tr></thead>
     <tbody>${rows.map(({ c, s }) => `
       <tr data-key="${esc(c.key)}" class="${c.own ? "own" : ""} ${state.hi === c.key ? "hi" : ""}">
         <td>${esc(c.name)}<div class="sub">${esc(c.umd)}</div></td>
         ${s.rows.length ? `<td>${fmtWon(s.recent)}</td>
-        <td>${deltaHtml(s.change) || "-"}</td>
+        <td>${deltaHtml(s.change3m) || "-"}</td>
+        <td class="col-n">${deltaHtml(s.change1y) || "-"}</td>
         <td>${s.last ? `${fmtWon(s.last[2])}<div class="sub">${s.last[0].slice(2).replaceAll("-", ".")}</div>` : "-"}</td>
-        <td class="col-n">${s.count2y}건</td>` : `<td colspan="4" class="sub" style="text-align:left;white-space:normal">84㎡ ${state.kind} 실거래 없음. 신축은 등기 전까지 분양권·입주권 거래로 신고되어 아직 잡히지 않을 수 있습니다.</td>`}</tr>`).join("")}</tbody>`;
+        <td class="col-n">${s.count3m}건</td>` : `<td colspan="5" class="sub" style="text-align:left;white-space:normal">84㎡ ${state.kind} 실거래 없음. 신축은 등기 전까지 분양권·입주권 거래로 신고되어 아직 잡히지 않을 수 있습니다.</td>`}</tr>`).join("")}</tbody>`;
   document.querySelectorAll("#cmp tbody tr").forEach(tr => tr.onclick = () => {
     const k = tr.dataset.key;
     state.hi = state.hi === k || g.complexes.find(c => c.key === k).own ? null : k;
