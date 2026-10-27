@@ -188,7 +188,10 @@ dialog#hist::backdrop { background: rgba(10,11,13,0.45); }
 .hist-head h3 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
 .close { width: 36px; height: 36px; flex: none; border: 0; border-radius: 10px; background: var(--panel); color: var(--ink-2); font-size: 16px; cursor: pointer; }
 .hist-body { padding: 4px 16px 20px; }
-.hist-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.hist-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.hist-ctrl .seg button { padding: 0 12px; }
+.hist-ctrl .dd > button { padding: 0 10px; }
+.hist-ctrl .dd > button::after { margin-left: 4px; }
 .divider { width: 1px; height: 22px; background: var(--axis); }
 .dd { position: relative; }
 .dd > button { height: 36px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--panel); color: var(--ink-2);
@@ -201,8 +204,22 @@ dialog#hist::backdrop { background: rgba(10,11,13,0.45); }
 .dd-menu button { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: 100%; height: 38px; padding: 0 10px;
   border: 0; border-radius: 8px; background: none; color: var(--ink); font-size: 14px; text-align: left; white-space: nowrap; cursor: pointer; }
 .dd-menu button:hover { background: var(--panel); }
-.dd-menu button[aria-checked="true"] { font-weight: 700; color: var(--own); }
 .dd-menu button .sub { font-weight: 400; font-size: 12px; }
+/* 다중 선택 체크 표시 */
+.dd-menu .ck { display: inline-flex; align-items: center; gap: 8px; }
+.dd-menu .ck::before { content: ""; width: 16px; height: 16px; flex: none; border-radius: 5px; border: 1.5px solid var(--axis); background: var(--surface);
+  background-position: center; background-repeat: no-repeat; background-size: 10px; }
+.dd-menu button[aria-checked="true"] .ck::before { border-color: var(--own); background-color: var(--own);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 8'%3E%3Cpath d='M1 4l2.5 2.5L9 1' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.dd-menu button[aria-checked="mixed"] .ck::before { border-color: var(--own); background-color: var(--own);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 8'%3E%3Cpath d='M2 4h6' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); }
+.dd-menu button[aria-checked="true"], .dd-menu button[aria-checked="mixed"] { font-weight: 600; }
+.dd-menu button.reset { height: 34px; color: var(--muted); font-size: 13px; border-bottom: 1px solid var(--line); border-radius: 8px 8px 0 0; margin-bottom: 4px; }
+.dd-group + .dd-group { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 4px; }
+.dd-group .qs { display: grid; grid-template-columns: repeat(4, auto); gap: 0 2px; padding: 0 0 2px 22px; }
+.dd-group .qs button { height: 34px; padding: 0 8px; font-size: 13px; }
+.dd-group .qs .ck { gap: 6px; }
+.dd-group .qs .ck::before { width: 14px; height: 14px; border-radius: 4px; background-size: 9px; }
 
 /* 표 (실거래 내역) */
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -486,7 +503,8 @@ function renderChart(g) {
 }
 
 // ---------- 단지별 실거래 내역 ----------
-const hist = { key: null, kind: "매매", floor: "", dong: "" };
+// 필터는 모두 여러 개 고를 수 있다. 각 Set이 비어 있으면 전체.
+const hist = { key: null, kind: "매매", dates: new Set(), dongs: new Set(), floors: new Set(), open: null };
 const shortDate = d => d ? d.slice(2).replaceAll("-", ".") : "";
 
 function bindHistButtons(root) {
@@ -494,7 +512,7 @@ function bindHistButtons(root) {
 }
 
 function openHistory(key) {
-  hist.key = key; hist.kind = state.kind; hist.floor = ""; hist.dong = "";
+  Object.assign(hist, { key, kind: state.kind, dates: new Set(), dongs: new Set(), floors: new Set(), open: null });
   const c = DATA.groups.flatMap(g => g.complexes).find(c => c.key === key);
   document.getElementById("hist-title").textContent = c.name;
   renderHistory();
@@ -504,6 +522,7 @@ function openHistory(key) {
 }
 
 const dongOf = r => r[6] ? r[6].replace(/동$/, "") : "";
+const quarterOf = r => `${r[0].slice(0, 4)}-Q${Math.ceil(+r[0].slice(5, 7) / 3)}`;
 
 // 층 구분: 이 단지 거래에서 확인된 최고층을 3등분한다 (예: 최고 22층 → 저층 1~7, 중층 8~14, 고층 15~22)
 function floorBands(key) {
@@ -516,31 +535,54 @@ function floorBands(key) {
   ];
 }
 
-// 눌러서 펼치는 필터 버튼. items: [값, 이름, 보조설명]
-function dropdown(id, title, items, current) {
-  const sel = items.find(i => i[0] === current) || items[0];
+// 선택 요약: 없으면 필터 이름, 하나면 그 값, 여러 개면 "이름 개수"
+const summary = (title, labels) => !labels.length ? title : labels.length === 1 ? labels[0] : `${title} ${labels.length}`;
+const check = (v, on, label, note = "", cls = "") =>
+  `<button type="button" role="menuitemcheckbox" class="${cls}" aria-checked="${on}" data-v="${esc(v)}"><span class="ck">${esc(label)}</span>${note ? `<span class="sub">${esc(note)}</span>` : ""}</button>`;
+
+// 눌러서 펼치는 다중 선택 필터. body는 메뉴 안의 항목 HTML
+function dropdown(id, label, active, body) {
+  const open = hist.open === id;
   return `<div class="dd" id="${id}">
-    <button type="button" class="${current ? "on" : ""}" aria-haspopup="menu" aria-expanded="false">${current ? esc(sel[1]) : title}</button>
-    <div class="dd-menu" role="menu" hidden>${items.map(([v, label, note]) =>
-      `<button type="button" role="menuitemradio" aria-checked="${v === current}" data-v="${esc(v)}"><span>${esc(label)}</span>${note ? `<span class="sub">${esc(note)}</span>` : ""}</button>`).join("")}</div>
+    <button type="button" class="${active ? "on" : ""}" aria-haspopup="menu" aria-expanded="${open}">${esc(label)}</button>
+    <div class="dd-menu" role="menu" ${open ? "" : "hidden"}>
+      <button type="button" class="reset" data-v="__all">전체 선택 해제</button>${body}</div>
   </div>`;
 }
 
-function bindDropdown(id, onPick) {
+function bindDropdown(id, set, expand = v => [v]) {
   const root = document.getElementById(id);
   if (!root) return;
-  const btn = root.querySelector(":scope > button"), menu = root.querySelector(".dd-menu");
-  btn.onclick = e => {
+  const menu = root.querySelector(".dd-menu");
+  root.querySelector(":scope > button").onclick = e => {
     e.stopPropagation();
-    const open = menu.hidden;
-    closeMenus();
-    menu.hidden = !open; btn.setAttribute("aria-expanded", open);
+    hist.open = hist.open === id ? null : id;
+    renderHistory();
   };
-  menu.querySelectorAll("button").forEach(b => b.onclick = () => onPick(b.dataset.v));
+  menu.querySelectorAll("button[data-v]").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const v = b.dataset.v;
+    if (v === "__all") set.clear();
+    else {
+      // 연도 항목은 그 해의 분기 전체를 한꺼번에 켜고 끈다
+      const vs = expand(v), allOn = vs.every(x => set.has(x));
+      vs.forEach(x => allOn ? set.delete(x) : set.add(x));
+    }
+    const top = menu.scrollTop;
+    renderHistory();
+    const again = document.querySelector(`#${id} .dd-menu`);
+    if (again) again.scrollTop = top;
+  });
+  if (!menu.hidden) {
+    // 창 오른쪽을 넘으면 넘친 만큼 왼쪽으로 당기되, 창 왼쪽 밖으로는 나가지 않게 한다
+    const dlg = document.getElementById("hist").getBoundingClientRect(), m = menu.getBoundingClientRect();
+    const over = m.right - (dlg.right - 12);
+    if (over > 0) menu.style.left = `${-Math.min(over, m.left - (dlg.left + 12))}px`;
+  }
 }
 
 function closeMenus() {
-  document.querySelectorAll(".dd-menu").forEach(m => { m.hidden = true; m.previousElementSibling.setAttribute("aria-expanded", "false"); });
+  if (hist.open) { hist.open = null; renderHistory(); }
 }
 
 function renderHistory() {
@@ -549,21 +591,42 @@ function renderHistory() {
   const sale = hist.kind === "매매";  // 전월세 자료에는 동이 없어 동 필터·칸은 매매에서만 보인다
   const bands = floorBands(hist.key);
   const dongs = [...new Set(all.map(dongOf).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko", { numeric: true }));
-  if (!sale || (hist.dong !== "" && hist.dong !== "none" && !dongs.includes(hist.dong))) hist.dong = "";
-  const band = bands.find(b => b.id === hist.floor);
+  const quarters = [...new Set(all.map(quarterOf))].sort().reverse();
+  const years = [...new Set(quarters.map(q => q.slice(0, 4)))];
+  const qsOf = y => quarters.filter(q => q.startsWith(y)).sort();
+  const useDong = sale && hist.dongs.size;
   const rows = all.filter(r =>
-    (!hist.dong || (hist.dong === "none" ? !dongOf(r) : dongOf(r) === hist.dong)) &&
-    (!band || (r[3] >= band.from && r[3] <= band.to)));
+    (!hist.dates.size || hist.dates.has(quarterOf(r))) &&
+    (!useDong || hist.dongs.has(dongOf(r) || "none")) &&
+    (!hist.floors.size || bands.some(b => hist.floors.has(b.id) && r[3] >= b.from && r[3] <= b.to)));
   const valid = rows.filter(r => !r[5]).map(r => r[2]);
+
+  // 버튼에 보일 선택 요약
+  const dateLabels = years.flatMap(y => {
+    const qs = qsOf(y), on = qs.filter(q => hist.dates.has(q));
+    if (!on.length) return [];
+    return on.length === qs.length ? [`${y}년`] : on.map(q => `${y.slice(2)}년 ${q.slice(-1)}분기`);
+  });
+  const dongLabels = [...dongs.filter(d => hist.dongs.has(d)).map(d => d + "동"), ...(hist.dongs.has("none") ? ["동 미공개"] : [])];
+  const floorLabels = bands.filter(b => hist.floors.has(b.id)).map(b => b.label);
 
   document.getElementById("hist-kind").innerHTML = ["매매", "전세"].map(k =>
     `<button data-k="${k}" aria-pressed="${hist.kind === k}">${k}</button>`).join("");
-  document.querySelectorAll("#hist-kind button").forEach(b => b.onclick = () => { hist.kind = b.dataset.k; renderHistory(); });
+  document.querySelectorAll("#hist-kind button").forEach(b => b.onclick = () => { hist.kind = b.dataset.k; hist.open = null; renderHistory(); });
+
+  const dateBody = years.map(y => {
+    const qs = qsOf(y), on = qs.filter(q => hist.dates.has(q)).length;
+    return `<div class="dd-group">${check("Y" + y, on === qs.length ? "true" : on ? "mixed" : "false", `${y}년`, "", "year")}
+      <div class="qs">${qs.map(q => check(q, hist.dates.has(q), `${q.slice(-1)}분기`, "", "q")).join("")}</div></div>`;
+  }).join("");
   document.getElementById("hist-filters").innerHTML =
-    (sale && dongs.length ? dropdown("hist-dong", "동", [["", "전체"], ...dongs.map(d => [d, d + "동"]), ["none", "동 미공개", "등기 전"]], hist.dong) : "") +
-    dropdown("hist-floor", "층", [["", "전체"], ...bands.map(b => [b.id, b.label, b.text])], hist.floor);
-  bindDropdown("hist-floor", v => { hist.floor = v; renderHistory(); });
-  bindDropdown("hist-dong", v => { hist.dong = v; renderHistory(); });
+    dropdown("hist-date", summary("계약일", dateLabels), dateLabels.length, dateBody) +
+    (sale && dongs.length ? dropdown("hist-dong", summary("동", dongLabels), dongLabels.length,
+      dongs.map(d => check(d, hist.dongs.has(d), d + "동")).join("") + check("none", hist.dongs.has("none"), "동 미공개", "등기 전")) : "") +
+    dropdown("hist-floor", summary("층", floorLabels), floorLabels.length, bands.map(b => check(b.id, hist.floors.has(b.id), b.label, b.text)).join(""));
+  bindDropdown("hist-date", hist.dates, v => v.startsWith("Y") ? qsOf(v.slice(1)) : [v]);
+  bindDropdown("hist-dong", hist.dongs);
+  bindDropdown("hist-floor", hist.floors);
 
   document.getElementById("hist-sub").innerHTML = `<span>전용 84㎡ ${hist.kind} ${rows.length}건</span>` +
     (valid.length ? `<span>중앙값 ${fmtWon(median(valid))}</span>` : "") + (sale ? "<span>동은 등기 후 공개</span>" : "");
