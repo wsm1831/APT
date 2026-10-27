@@ -39,8 +39,8 @@ class Complex:
     keywords: list[str]
     completed: str = ""
     naver_complex_id: str = ""
-    # 비교 단지를 찾을 인근 법정동. [{"lawd_cd": "27140", "umd": "신천동"}, ...]
-    nearby: list[dict] = field(default_factory=list)
+    # 비교 단지. [{"name": "더샵디어엘로", "lawd_cd": "27140", "umd": "신천동", "keywords": ["디어엘로"]}, ...]
+    compare: list[dict] = field(default_factory=list)
 
     @property
     def naver_url(self) -> str:

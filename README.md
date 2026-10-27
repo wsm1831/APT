@@ -10,7 +10,7 @@
 - 새로 신고된 거래가 있으면 이슈를 만들어 GitHub 알림(앱·메일)을 보냅니다
 - 인증키: 저장소 Settings → Secrets and variables → Actions에 `DATA_GO_KR_KEY`
 - 대시보드 켜기: Settings → Pages → Branch를 `claude/apt-price-mvp`, 폴더 `/docs`로 저장
-- 비교 단지: `complexes.json`의 `nearby`(인근 법정동)에서 최근 2년 84㎡ 매매가 많은 순으로 최대 6개 자동 선정
+- 비교 단지: `complexes.json`의 `compare`에 직접 지정 (단지명이 실거래 자료와 안 맞으면 Actions 로그에 같은 동 단지명 목록이 경고로 나옵니다)
 - 수동 실행: Actions → 실거래가 수집 → Run workflow
 
 ## 1. 인증키 발급 (최초 1회)
@@ -43,7 +43,7 @@ streamlit run app.py
 | `lawd_cd` | 법정동코드 앞 5자리 (시군구). 대구 중구 27110, 동구 27140, 수성구 27260 |
 | `umd` | 법정동 이름. 같은 구의 동명 단지를 걸러냅니다 |
 | `keywords` | 실거래 데이터의 단지명(`aptNm`)에 포함되는 문자열. 띄어쓰기는 무시합니다 |
-| `nearby` | 비교 단지를 찾을 인근 법정동 목록 `[{"lawd_cd": "27140", "umd": "신천동"}]` |
+| `compare` | 비교 단지 목록 `[{"name": "더샵디어엘로", "lawd_cd": "27140", "umd": "신천동", "keywords": ["디어엘로"]}]`. 남구는 27200 |
 | `naver_complex_id` | 네이버 부동산 단지 번호. 네이버 부동산에서 단지를 열었을 때 주소의 `/complexes/숫자` 부분. 비워 두면 검색 결과로 연결됩니다 |
 
 ## 구성

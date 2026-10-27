@@ -11,8 +11,8 @@ import argparse
 import json
 import os
 import sys
-from collections import Counter, defaultdict
-from datetime import date, datetime, timedelta, timezone
+from collections import Counter
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -26,8 +26,6 @@ KST = timezone(timedelta(hours=9))
 
 # 실거래 자료의 전용면적은 84.97, 84.357처럼 들어오므로 범위로 '84㎡ 타입'을 정한다.
 AREA_MIN, AREA_MAX = 83.0, 86.0
-NEIGHBOR_LIMIT = 6        # 보유 단지마다 비교 단지 최대 개수
-NEIGHBOR_MIN_TRADES = 3   # 최근 2년 84㎡ 매매가 이보다 적은 단지는 비교에서 뺀다
 
 
 def row_of(kind: str, it: dict) -> list | None:
@@ -55,7 +53,7 @@ def complex_key(lawd_cd: str, umd: str, apt: str) -> str:
 def build(client: RtmsClient, owned: list[Complex], months: int) -> dict:
     items: dict[tuple[str, str], list[dict]] = {}
     missing: set[str] = set()
-    for lawd in sorted({cx.lawd_cd for cx in owned} | {n["lawd_cd"] for cx in owned for n in cx.nearby}):
+    for lawd in sorted({cx.lawd_cd for cx in owned} | {c["lawd_cd"] for cx in owned for c in cx.compare}):
         for kind in ("매매", "전월세"):
             print(f"수집: {lawd} {kind} {months}개월", flush=True)
             try:
@@ -67,36 +65,27 @@ def build(client: RtmsClient, owned: list[Complex], months: int) -> dict:
                 print(f"경고: {kind} 수집 실패, 건너뜀 ({e})", file=sys.stderr, flush=True)
                 missing.add("전세")
 
-    cutoff = (date.today() - timedelta(days=730)).isoformat()
     groups, trades = [], {}
     for cx in owned:
-        dongs = {(n["lawd_cd"], _norm(n["umd"])) for n in cx.nearby} | {(cx.lawd_cd, _norm(cx.umd))}
-        per_complex: dict[str, dict] = defaultdict(lambda: {"rows": []})
-        own_key = f"own-{cx.id}"
-        for (lawd, kind), its in items.items():
-            for it in its:
-                umd = it.get("umdNm", "")
-                if (lawd, _norm(umd)) not in dongs:
-                    continue
-                row = row_of(kind, it)
-                if row is None:
-                    continue
-                key = own_key if matches(it, cx) else complex_key(lawd, umd, it.get("aptNm", ""))
-                entry = per_complex[key]
-                entry.setdefault("name", cx.name if key == own_key else it.get("aptNm", ""))
-                entry.setdefault("umd", umd)
-                entry["rows"].append(row)
-
-        recent = Counter(
-            key for key, e in per_complex.items() for r in e["rows"] if r[1] == "매매" and r[0] >= cutoff and not r[5]
-        )
-        neighbors = [k for k, n in recent.most_common() if k != own_key and n >= NEIGHBOR_MIN_TRADES][:NEIGHBOR_LIMIT]
-
+        targets = [(f"own-{cx.id}", cx, True)] + [
+            (complex_key(c["lawd_cd"], c["umd"], c["name"]),
+             Complex(id=c["name"], name=c["name"], region="", lawd_cd=c["lawd_cd"], umd=c["umd"], keywords=c["keywords"]),
+             False)
+            for c in cx.compare
+        ]
         members = []
-        for key in [own_key, *neighbors]:
-            e = per_complex.get(key, {"name": cx.name, "umd": cx.umd, "rows": []})
-            members.append({"key": key, "name": e["name"], "umd": e["umd"], "own": key == own_key})
-            trades[key] = sorted(e["rows"])
+        for key, t, own in targets:
+            rows = [
+                row for (lawd, kind), its in items.items() if lawd == t.lawd_cd
+                for it in its if matches(it, t) and (row := row_of(kind, it)) is not None
+            ]
+            if not rows:
+                # 단지명이 실거래 자료와 다르게 적혀 있을 때 고칠 수 있도록 같은 동의 단지명을 남긴다.
+                names = sorted({it.get("aptNm", "") for (lawd, _), its in items.items() if lawd == t.lawd_cd
+                                for it in its if _norm(it.get("umdNm")) == _norm(t.umd)})
+                print(f"경고: {t.name}({t.umd}) 84㎡ 거래 없음. 같은 동 단지명: {', '.join(names)}", file=sys.stderr)
+            members.append({"key": key, "name": t.name, "umd": t.umd, "own": own})
+            trades[key] = sorted(rows)
         groups.append({
             "id": cx.id, "name": cx.name, "region": cx.region, "completed": cx.completed,
             "naver_url": cx.naver_url, "complexes": members,
@@ -112,6 +101,8 @@ def diff_new(old: dict, new: dict) -> list[dict]:
     own = {c["key"] for g in new["groups"] for c in g["complexes"] if c["own"]}
     out = []
     for key, rows in new["trades"].items():
+        if key not in old["trades"]:
+            continue  # 비교 단지를 새로 추가했을 때 과거 거래 전체를 알림하지 않는다
         seen = Counter(tuple(r) for r in old["trades"].get(key, []))
         for r in rows:
             t = tuple(r)

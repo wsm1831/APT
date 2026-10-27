@@ -8,9 +8,10 @@
     "keywords": ["이안센트럴"],
     "completed": "2021-09",
     "naver_complex_id": "",
-    "nearby": [
-      {"lawd_cd": "27140", "umd": "신암동"},
-      {"lawd_cd": "27140", "umd": "신천동"}
+    "compare": [
+      {"name": "동대구역화성파크드림", "lawd_cd": "27140", "umd": "신암동", "keywords": ["동대구역화성파크드림"]},
+      {"name": "더샵디어엘로", "lawd_cd": "27140", "umd": "신천동", "keywords": ["디어엘로"]},
+      {"name": "동대구역센트럴시티자이", "lawd_cd": "27140", "umd": "신천동", "keywords": ["동대구역센트럴시티자이"]}
     ]
   },
   {
@@ -22,10 +23,11 @@
     "keywords": ["리비테르2"],
     "completed": "2022-03",
     "naver_complex_id": "",
-    "nearby": [
-      {"lawd_cd": "27110", "umd": "대봉동"},
-      {"lawd_cd": "27110", "umd": "봉산동"},
-      {"lawd_cd": "27110", "umd": "남산동"}
+    "compare": [
+      {"name": "더샵리비테르1차", "lawd_cd": "27110", "umd": "대봉동", "keywords": ["리비테르1"]},
+      {"name": "e편한세상명덕역퍼스트마크", "lawd_cd": "27200", "umd": "대명동", "keywords": ["명덕역퍼스트마크"]},
+      {"name": "대봉서한이다음", "lawd_cd": "27110", "umd": "대봉동", "keywords": ["서한이다음"]},
+      {"name": "교대역푸르지오트레힐즈", "lawd_cd": "27200", "umd": "이천동", "keywords": ["교대역푸르지오"]}
     ]
   }
 ]

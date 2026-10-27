@@ -17,7 +17,8 @@ class FakeClient:
 
 
 OWN = Complex("ian", "이안센트럴D", "대구 동구 신암동", "27140", "신암동", ["이안센트럴"],
-              nearby=[{"lawd_cd": "27140", "umd": "신천동"}])
+              compare=[{"name": "동대구역센트럴시티자이", "lawd_cd": "27140", "umd": "신천동", "keywords": ["센트럴시티자이"]},
+                       {"name": "교대역푸르지오트레힐즈", "lawd_cd": "27200", "umd": "이천동", "keywords": ["교대역푸르지오"]}])
 
 
 def test_row_of_filters_area_and_wolse():
@@ -29,15 +30,25 @@ def test_row_of_filters_area_and_wolse():
     assert row_of("전월세", {**rent, "monthlyRent": "100"}) is None
 
 
-def test_build_groups_neighbors():
+def test_build_uses_compare_list():
     sale = [item("이안센트럴D", "신암동", "76,000")]
-    sale += [item("센트럴시티자이", "신천동", "70,000", ym=(2026, 9, d)) for d in (1, 2, 3)]
-    sale += [item("드문단지", "신천동", "50,000")]                      # 거래 3건 미만 → 제외
-    sale += [item("다른동단지", "효목동", "60,000", ym=(2026, 9, d)) for d in (1, 2, 3)]  # 인근 동 아님
-    data = build(FakeClient({("27140", "매매"): sale}), [OWN], 60)
-    names = [c["name"] for c in data["groups"][0]["complexes"]]
-    assert names == ["이안센트럴D", "센트럴시티자이"]
-    assert data["trades"]["own-ian"][0][2] == 76000
+    sale += [item("동대구역센트럴시티자이", "신천동", "70,000", ym=(2026, 9, d)) for d in (1, 2, 3)]
+    sale += [item("지정안한단지", "신천동", "50,000")]
+    data = build(FakeClient({
+        ("27140", "매매"): sale,
+        ("27200", "매매"): [item("교대역 푸르지오 트레힐즈", "이천동", "80,000")],
+    }), [OWN], 60)
+    members = data["groups"][0]["complexes"]
+    assert [c["name"] for c in members] == ["이안센트럴D", "동대구역센트럴시티자이", "교대역푸르지오트레힐즈"]
+    assert [len(data["trades"][c["key"]]) for c in members] == [1, 3, 1]
+
+
+def test_diff_new_ignores_newly_added_complex():
+    old = build(FakeClient({("27140", "매매"): [item("이안센트럴D", "신암동", "76,000")]}), [OWN], 60)
+    del old["trades"][old["groups"][0]["complexes"][1]["key"]]
+    new = build(FakeClient({("27140", "매매"): [
+        item("이안센트럴D", "신암동", "76,000"), item("동대구역센트럴시티자이", "신천동", "70,000")]}), [OWN], 60)
+    assert diff_new(old, new) == []
 
 
 def test_diff_new_detects_added_and_cancelled():
