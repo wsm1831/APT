@@ -50,3 +50,16 @@ def test_diff_new_detects_added_and_cancelled():
     ev = diff_new(old, new)
     assert [(e["price"], e["cancelled"]) for e in ev] == [(76000, True), (77000, False)]
     assert all(e["own"] for e in ev)
+
+
+def test_build_skips_rent_when_forbidden():
+    import requests
+
+    class Partial(FakeClient):
+        def collect(self, kind, lawd, months):
+            if kind == "전월세":
+                raise requests.HTTPError("403 Client Error: Forbidden")
+            return super().collect(kind, lawd, months)
+
+    data = build(Partial({("27140", "매매"): [item("이안센트럴D", "신암동", "76,000")]}), [OWN], 60)
+    assert data["missing"] == ["전세"] and len(data["trades"]["own-ian"]) == 1

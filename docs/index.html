@@ -225,6 +225,7 @@ function render() {
       </div>
     </section>
 
+    ${(DATA.missing || []).includes("전세") ? `<div class="card empty">전세 실거래는 아직 수집하지 못했습니다. 공공데이터포털에서 「국토교통부_아파트 전월세 실거래가 자료」를 활용신청하면 다음 수집부터 표시됩니다.</div>` : ""}
     <section class="card">
       <div class="title-row"><h2 style="font-size:16px">인근 단지와 비교</h2></div>
       <div class="controls">

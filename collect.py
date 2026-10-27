@@ -15,6 +15,8 @@ from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+import requests
+
 from rtms import ApiError, Complex, RtmsClient, _norm, _num, load_complexes, matches
 
 ROOT = Path(__file__).parent
@@ -52,10 +54,18 @@ def complex_key(lawd_cd: str, umd: str, apt: str) -> str:
 
 def build(client: RtmsClient, owned: list[Complex], months: int) -> dict:
     items: dict[tuple[str, str], list[dict]] = {}
+    missing: set[str] = set()
     for lawd in sorted({cx.lawd_cd for cx in owned} | {n["lawd_cd"] for cx in owned for n in cx.nearby}):
         for kind in ("매매", "전월세"):
             print(f"수집: {lawd} {kind} {months}개월", flush=True)
-            items[(lawd, kind)] = client.collect(kind, lawd, months)
+            try:
+                items[(lawd, kind)] = client.collect(kind, lawd, months)
+            except (ApiError, requests.HTTPError) as e:
+                # 전월세 API는 활용신청을 따로 해야 한다. 없으면 매매만이라도 수집한다.
+                if kind == "매매":
+                    raise
+                print(f"경고: {kind} 수집 실패, 건너뜀 ({e})", file=sys.stderr, flush=True)
+                missing.add("전세")
 
     cutoff = (date.today() - timedelta(days=730)).isoformat()
     groups, trades = [], {}
@@ -91,7 +101,7 @@ def build(client: RtmsClient, owned: list[Complex], months: int) -> dict:
             "id": cx.id, "name": cx.name, "region": cx.region, "completed": cx.completed,
             "naver_url": cx.naver_url, "complexes": members,
         })
-    return {"groups": groups, "trades": trades}
+    return {"groups": groups, "trades": trades, "missing": sorted(missing)}
 
 
 def diff_new(old: dict, new: dict) -> list[dict]:
@@ -142,7 +152,7 @@ def main() -> int:
     old = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
     try:
         data = build(RtmsClient(key), load_complexes(), args.months)
-    except ApiError as e:
+    except (ApiError, requests.HTTPError) as e:
         print(f"실거래가 API 오류: {e}", file=sys.stderr)
         return 1
 
