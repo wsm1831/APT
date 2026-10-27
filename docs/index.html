@@ -321,11 +321,17 @@ const byMonthOf = rows => {
   return out;
 };
 
-// 월별 평균가격. 거래가 없는 달은 비워 둔다.
+// 월별 평균가격. 거래가 없는 달은 직전 거래월의 평균을 그대로 이어 쓰고 0건으로 둔다.
 function monthlySeries(rows, from, to) {
   const byMonth = byMonthOf(rows);
+  const before = Object.keys(byMonth).filter(k => k < from).sort().pop();
+  let carry = before ? mean(byMonth[before]) : null;
   const out = [];
-  for (let m = from; m <= to; m = addMonths(m, 1)) out.push({ m, v: mean(byMonth[m] || []), n: (byMonth[m] || []).length });
+  for (let m = from; m <= to; m = addMonths(m, 1)) {
+    const n = (byMonth[m] || []).length;
+    if (n) carry = mean(byMonth[m]);
+    out.push({ m, v: carry, n });
+  }
   return out;
 }
 
@@ -513,7 +519,6 @@ function renderChart(g) {
 
   const path = pts => {
     let d = "", pen = false;
-    // 거래가 없는 달은 건너뛰고 앞뒤 달을 잇는다
     pts.forEach((p, i) => { if (p.v == null) return; d += `${pen ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`; pen = true; });
     return d;
   };
@@ -533,7 +538,9 @@ function renderChart(g) {
       ${dots.map(r => `<circle cx="${dayX(r[0]).toFixed(1)}" cy="${y(r[2]).toFixed(1)}" r="3.5" fill="var(--own)" fill-opacity="0.3"/>`).join("")}
       <path d="${path(own.pts)}" fill="none" stroke="var(--surface)" stroke-width="5" stroke-linejoin="round"/>
       <path d="${path(own.pts)}" fill="none" stroke="var(--own)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-      ${own.pts.map((p, i) => p.v == null ? "" : `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="3" fill="var(--own)" stroke="var(--surface)" stroke-width="1.5"/>`).join("")}
+      ${own.pts.map((p, i) => p.v == null ? "" : p.n
+        ? `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="3" fill="var(--own)" stroke="var(--surface)" stroke-width="1.5"/>`
+        : `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="2.5" fill="var(--surface)" stroke="var(--own)" stroke-width="1.5"/>`).join("")}
       <line id="xh" y1="${M.t}" y2="${H - M.b}" stroke="var(--axis)" visibility="hidden"/>
       <circle id="xo" r="4.5" fill="var(--own)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/>
       <rect x="${M.l}" y="0" width="${W - M.l - M.r}" height="${H}" fill="transparent" id="hit"/>
@@ -552,7 +559,7 @@ function renderChart(g) {
     const lines = series.map(s => ({ s, v: s.pts[i].v })).filter(o => o.v != null).sort((a, b) => b.v - a.v);
     tip.innerHTML = `<b>${months[i].replace("-", ".")}</b>` + (lines.length ? lines.map(o =>
       `<div class="r ${o.s.c.own ? "own" : ""}"><span>${esc(o.s.c.name)}</span><span>${fmtWon(o.v)} <span class="sub">${o.s.pts[i].n}건</span></span></div>`).join("")
-      : `<div class="r">거래 없음</div>`) + `<div class="r note">월 평균가격</div>`;
+      : `<div class="r">거래 없음</div>`) + `<div class="r note">월 평균가격, 0건은 직전 거래월 가격</div>`;
     tip.style.display = "block";
     const left = x(i) / scale, tw = tip.offsetWidth;
     tip.style.left = Math.min(Math.max(0, left + 12 + tw > pt.width ? left - tw - 12 : left + 12), pt.width - tw) + "px";
