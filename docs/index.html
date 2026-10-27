@@ -491,8 +491,8 @@ function renderHistory() {
     `<button data-k="${k}" aria-pressed="${hist.kind === k}">${k}</button>`).join("");
   document.querySelectorAll("#hist-kind button").forEach(b => b.onclick = () => { hist.kind = b.dataset.k; renderHistory(); });
   document.getElementById("hist-filters").innerHTML =
-    dropdown("hist-floor", "층", [["", "전체"], ...bands.map(b => [b.id, b.label, b.text])], hist.floor) +
-    (sale && dongs.length ? dropdown("hist-dong", "동", [["", "전체"], ...dongs.map(d => [d, d + "동"]), ["none", "동 미공개", "등기 전"]], hist.dong) : "");
+    (sale && dongs.length ? dropdown("hist-dong", "동", [["", "전체"], ...dongs.map(d => [d, d + "동"]), ["none", "동 미공개", "등기 전"]], hist.dong) : "") +
+    dropdown("hist-floor", "층", [["", "전체"], ...bands.map(b => [b.id, b.label, b.text])], hist.floor);
   bindDropdown("hist-floor", v => { hist.floor = v; renderHistory(); });
   bindDropdown("hist-dong", v => { hist.dong = v; renderHistory(); });
 
