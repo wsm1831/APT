@@ -74,3 +74,13 @@ def test_build_skips_rent_when_forbidden():
 
     data = build(Partial({("27140", "매매"): [item("이안센트럴D", "신암동", "76,000")]}), [OWN], 60)
     assert data["missing"] == ["전세"] and len(data["trades"]["own-ian"]) == 1
+
+
+def test_diff_new_ignores_kind_first_collected():
+    sale = [item("이안센트럴D", "신암동", "76,000")]
+    rent = [{**item("이안센트럴D", "신암동", "0"), "deposit": "40,000", "monthlyRent": "0"}]
+    old = build(FakeClient({("27140", "매매"): sale}), [OWN], 60)
+    old["missing"] = ["전세"]
+    new = build(FakeClient({("27140", "매매"): sale + [item("이안센트럴D", "신암동", "77,000", ym=(2026, 10, 1))],
+                            ("27140", "전월세"): rent}), [OWN], 60)
+    assert [(e["kind"], e["price"]) for e in diff_new(old, new)] == [("매매", 77000)]

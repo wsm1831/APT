@@ -99,12 +99,16 @@ def diff_new(old: dict, new: dict) -> list[dict]:
         return []  # 첫 실행이면 전부 새 거래라 알림하지 않는다
     names = {c["key"]: c["name"] for g in new["groups"] for c in g["complexes"]}
     own = {c["key"] for g in new["groups"] for c in g["complexes"] if c["own"]}
+    # 이전 실행에서 못 받은 구분(예: 전월세 API 신청 전의 전세)은 과거 거래 전체가 새로 들어오므로 알림하지 않는다
+    skip_kinds = set(old.get("missing", [])) - set(new.get("missing", []))
     out = []
     for key, rows in new["trades"].items():
         if key not in old["trades"]:
             continue  # 비교 단지를 새로 추가했을 때 과거 거래 전체를 알림하지 않는다
         seen = Counter(tuple(r) for r in old["trades"].get(key, []))
         for r in rows:
+            if r[1] in skip_kinds:
+                continue
             t = tuple(r)
             if seen[t]:
                 seen[t] -= 1
