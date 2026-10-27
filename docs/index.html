@@ -124,6 +124,26 @@ h2 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; margin: 0; whit
 .tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 6px; background: var(--panel);
   font-size: 11px; font-weight: 500; color: var(--ink-2); white-space: nowrap; vertical-align: middle; }
 .tag.warn { color: var(--up); }
+.tag.rec { color: #fff; background: var(--up); font-weight: 700; }
+.tile .value .tag.rec { margin-left: 6px; vertical-align: 3px; }
+td .tag.rec { margin: 0 4px 0 0; vertical-align: 1px; }
+.m .tag.rec { margin-top: 3px; }
+.tile .tags { display: inline-flex; gap: 4px; }
+.ratio { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px; border-radius: 6px;
+  background: var(--surface); color: var(--ink); font-size: 12px; font-weight: 700; }
+.ratio::before { content: "전세가율"; font-weight: 500; color: var(--muted); font-size: 11px; }
+.tile.wide { grid-column: span 2; }
+/* 휴대폰 폭에서 반 칸 타일에 제목과 전세가율이 한 줄로 들어가도록 여백을 조금 줄인다 */
+@media (max-width: 420px) {
+  .card { padding: 16px 12px; }
+  .tile { padding: 12px 10px 11px; }
+  .tile .label { gap: 4px; }
+  .ratio { padding: 0 5px; gap: 3px; }
+  .ratio::before { font-size: 10px; }
+}
+.hilo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+.hilo .hl + .hl { border-left: 1px solid var(--line); padding-left: 12px; }
+.hilo .value { margin: 0 0 2px; }
 
 /* 그래프 */
 .controls { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -294,17 +314,47 @@ const rowsOf = (key, kind) => (DATA.trades[key] || []).filter(r => r[1] === kind
 const today = () => new Date().toISOString().slice(0, 10);
 const monthsAgo = n => addMonths(ym(today()), -n);
 
-// 월별 중앙값(직전 3개월 거래를 묶어 거래가 드문 달의 튐을 줄인다)
+const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+const byMonthOf = rows => {
+  const out = {};
+  for (const r of rows) (out[ym(r[0])] ||= []).push(r[2]);
+  return out;
+};
+
+// 월별 평균가격. 거래가 없는 달은 비워 둔다.
 function monthlySeries(rows, from, to) {
-  const byMonth = {};
-  for (const r of rows) (byMonth[ym(r[0])] ||= []).push(r[2]);
+  const byMonth = byMonthOf(rows);
   const out = [];
-  for (let m = from; m <= to; m = addMonths(m, 1)) {
-    const win = [m, addMonths(m, -1), addMonths(m, -2)].flatMap(k => byMonth[k] || []);
-    out.push({ m, v: win.length ? median(win) : null, n: (byMonth[m] || []).length });
-  }
+  for (let m = from; m <= to; m = addMonths(m, 1)) out.push({ m, v: mean(byMonth[m] || []), n: (byMonth[m] || []).length });
   return out;
 }
+
+// 실거래 동향 표: 최근 거래월 평균, 그 직전 거래월 대비, 1년 전 같은 달 대비
+function monthlyStats(key, kind) {
+  const rows = rowsOf(key, kind), byMonth = byMonthOf(rows);
+  const months = Object.keys(byMonth).sort();
+  const m = months[months.length - 1], pm = months[months.length - 2];
+  const v = m && mean(byMonth[m]), pv = pm && mean(byMonth[pm]), yv = m && mean(byMonth[addMonths(m, -12)] || []);
+  const pct = base => v && base ? (v / base - 1) * 100 : null;
+  return { rows, m, v, n: m ? byMonth[m].length : 0, pm, change: pct(pv), change1y: pct(yv), last: rows[rows.length - 1] };
+}
+const monthLabel = m => `${+m.slice(5)}월`;
+
+// 신고가: 그 거래 이전의 모든 84㎡ 매매(해제 제외)보다 비싼 거래. 첫 거래는 비교 대상이 없어 제외한다.
+const recordCache = new Map();
+function records(key) {
+  if (!recordCache.has(key)) {
+    const set = new WeakSet();
+    let top = null;
+    for (const r of rowsOf(key, "매매")) {
+      if (top != null && r[2] > top) set.add(r);
+      top = Math.max(top ?? r[2], r[2]);
+    }
+    recordCache.set(key, set);
+  }
+  return recordCache.get(key);
+}
+const recordTag = '<span class="tag rec">신고가</span>';
 
 function windowMedian(rows, fromMonth, toMonth) {
   return median(rows.filter(r => ym(r[0]) > fromMonth && ym(r[0]) <= toMonth).map(r => r[2]));
@@ -337,10 +387,23 @@ function tile(label, value, line, deltas = "", tag = "") {
   return `<div class="tile"><div class="label">${label}${tag}</div><div class="value">${value}</div>
     <div class="line">${line}</div>${deltas ? `<div class="deltas">${deltas}</div>` : ""}</div>`;
 }
-function priceTile(label, s) {
-  if (s.recent == null) return tile(label, "-", "최근 3개월 거래 없음");
+function priceTile(label, s, badge = "") {
+  if (s.recent == null) return tile(label, "-", "최근 3개월 거래 없음", "", badge);
   const chips = `<span class="chip">직전 3개월 대비 ${deltaHtml(s.change3m) || "-"}</span><span class="chip">1년 전 대비 ${deltaHtml(s.change1y) || "-"}</span>`;
-  return tile(label, fmtWon(s.recent), `최근 3개월 중앙값 ${s.count3m}건`, chips, s.count3m < 3 ? '<span class="tag warn">거래 적음</span>' : "");
+  const tags = (s.count3m < 3 ? '<span class="tag warn">거래 적음</span>' : "") + badge;
+  return tile(label, fmtWon(s.recent), `최근 3개월 중앙값 ${s.count3m}건`, chips, tags ? `<span class="tags">${tags}</span>` : "");
+}
+
+// 최근 3개월 매매의 최고가·최저가
+function rangeTile(key, s) {
+  const rows = s.rows.filter(r => ym(r[0]) > monthsAgo(3));
+  if (!rows.length) return tile("최근 3개월 매매", "-", "거래 없음").replace('class="tile"', 'class="tile wide"');
+  const hi = rows.reduce((a, r) => r[2] >= a[2] ? r : a), lo = rows.reduce((a, r) => r[2] < a[2] ? r : a);
+  const rec = records(key);
+  const cell = (name, r) => `<div class="hl"><div class="line">${name}</div>
+    <div class="value">${fmtWon(r[2])}${rec.has(r) ? recordTag : ""}</div><div class="line">${shortDate(r[0])} ${r[3]}층</div></div>`;
+  return `<div class="tile wide"><div class="label">최근 3개월 매매<span class="tag">${rows.length}건</span></div>
+    <div class="hilo">${cell("최고가", hi)}${cell("최저가", lo)}</div></div>`;
 }
 
 function render() {
@@ -363,24 +426,23 @@ function render() {
         </div>
       </div>
       <div class="tiles">
-        ${tile("최근 매매", fmtWon(sale.last?.[2]), sale.last ? `${dotDate(sale.last[0])} ${sale.last[3]}층` : "거래 없음")}
+        ${rangeTile(own.key, sale)}
         ${priceTile("매매 시세", sale)}
-        ${priceTile("전세 시세", jeon)}
-        ${tile("전세가율", ratio ? ratio.toFixed(0) + "%" : "-", "전세 ÷ 매매")}
+        ${priceTile("전세 시세", jeon, ratio ? `<span class="ratio" title="전세가율: 전세 ÷ 매매 (3개월 중앙값)">${ratio.toFixed(0)}%</span>` : "")}
       </div>
     </section>
 
     ${(DATA.missing || []).includes("전세") ? `<div class="card notice">전세 실거래는 아직 수집하지 못했습니다. 공공데이터포털에서 「국토교통부_아파트 전월세 실거래가 자료」를 활용신청하면 다음 수집부터 표시됩니다.</div>` : ""}
     <section class="card">
       <div class="card-head">
-        <h2>비교 단지</h2>
+        <h2>실거래 동향</h2>
         <div class="controls">
           <div class="seg" role="group" aria-label="거래 구분">${segBtns("data-kind", [["매매", "매매"], ["전세", "전세"]], state.kind)}</div>
           <div class="seg" role="group" aria-label="기간">${segBtns("data-years", [[1, "1년"], [3, "3년"], [5, "5년"]], state.years)}</div>
         </div>
       </div>
       <div class="chart-wrap" id="chart"></div>
-      <div class="legend"><span><i style="background:var(--own)"></i>${esc(own.name)}</span>
+      <div class="legend"><span><i style="background:var(--own)"></i>${esc(own.name)} 월 평균</span>
         <span><i class="dot" style="background:var(--own)"></i>개별 거래</span>
         <span><i style="background:var(--other)"></i>비교 단지</span></div>
       <div class="cmp" id="cmp"></div>
@@ -403,18 +465,18 @@ function render() {
 }
 
 function renderTable(g) {
-  const rows = g.complexes.map(c => ({ c, s: stats(c.key, state.kind) }));
+  const rows = g.complexes.map(c => ({ c, s: monthlyStats(c.key, state.kind) }));
   document.getElementById("cmp").innerHTML = `
-    <div class="cmp-row head"><div class="name">단지</div><div class="m">시세</div><div class="m">3개월</div><div class="m">1년</div><div class="m">최근 거래</div></div>
+    <div class="cmp-row head"><div class="name">단지</div><div class="m">월 평균</div><div class="m">전월 대비</div><div class="m">1년 전 대비</div><div class="m">최근 거래</div></div>
     ${rows.map(({ c, s }) => `
     <div class="cmp-row ${c.own ? "own" : ""} ${state.hi === c.key ? "hi" : ""}" data-key="${esc(c.key)}">
       <div class="name"><div class="t"><strong>${esc(c.name)}</strong><span class="sub">${esc(c.umd)}</span></div>
         ${(DATA.trades[c.key] || []).length ? `<button class="btn sm" data-hist="${esc(c.key)}">내역</button>` : ""}</div>
       ${s.rows.length ? `
-      <div class="m"><b>${fmtWon(s.recent)}</b></div>
-      <div class="m">${deltaHtml(s.change3m) || "-"}</div>
+      <div class="m"><b>${fmtWon(s.v)}</b><div class="sub">${monthLabel(s.m)} ${s.n}건</div></div>
+      <div class="m">${deltaHtml(s.change) || "-"}${s.pm ? `<div class="sub">${monthLabel(s.pm)} 대비</div>` : ""}</div>
       <div class="m">${deltaHtml(s.change1y) || "-"}</div>
-      <div class="m">${s.last ? `${fmtWon(s.last[2])}<div class="sub">${shortDate(s.last[0])}</div>` : "-"}</div>`
+      <div class="m">${s.last ? `${fmtWon(s.last[2])}<div class="sub">${shortDate(s.last[0])}</div>${records(c.key).has(s.last) && state.kind === "매매" ? `<div>${recordTag}</div>` : ""}` : "-"}</div>`
       : `<div class="none">84㎡ ${state.kind} 실거래 없음. 신축은 등기 전까지 분양권·입주권 거래로 신고되어 아직 잡히지 않을 수 있습니다.</div>`}
     </div>`).join("")}`;
   bindHistButtons(document.getElementById("cmp"));
@@ -451,7 +513,8 @@ function renderChart(g) {
 
   const path = pts => {
     let d = "", pen = false;
-    pts.forEach((p, i) => { if (p.v == null) { pen = false; return; } d += `${pen ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`; pen = true; });
+    // 거래가 없는 달은 건너뛰고 앞뒤 달을 잇는다
+    pts.forEach((p, i) => { if (p.v == null) return; d += `${pen ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`; pen = true; });
     return d;
   };
   const yTicks = []; for (let v = lo; v <= hi + 1; v += step) yTicks.push(v);
@@ -460,8 +523,8 @@ function renderChart(g) {
   const others = series.filter(s => !s.c.own);
   const hiS = others.find(s => s.c.key === state.hi);
   box.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(g.name)}와 인근 단지 ${state.kind} 월별 중앙값 추이">
-      ${yTicks.map(v => `<line x1="${M.l}" x2="${W - M.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(g.name)}와 비교 단지 ${state.kind} 월별 평균가격 추이">
+      ${yTicks.map(v => `<line x1="${M.l}" x2="${W - M.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/>
         <text x="${M.l - 6}" y="${y(v) + 4}" text-anchor="end">${fmtEok(v)}</text>`).join("")}
       <line x1="${M.l}" x2="${W - M.r}" y1="${H - M.b}" y2="${H - M.b}" stroke="var(--axis)"/>
       ${xTicks.map(t => `<text x="${x(t.i)}" y="${H - 6}" text-anchor="middle">${state.years === 1 ? +t.m.slice(5) + "월" : t.m.slice(0, 4)}</text>`).join("")}
@@ -470,6 +533,7 @@ function renderChart(g) {
       ${dots.map(r => `<circle cx="${dayX(r[0]).toFixed(1)}" cy="${y(r[2]).toFixed(1)}" r="3.5" fill="var(--own)" fill-opacity="0.3"/>`).join("")}
       <path d="${path(own.pts)}" fill="none" stroke="var(--surface)" stroke-width="5" stroke-linejoin="round"/>
       <path d="${path(own.pts)}" fill="none" stroke="var(--own)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${own.pts.map((p, i) => p.v == null ? "" : `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="3" fill="var(--own)" stroke="var(--surface)" stroke-width="1.5"/>`).join("")}
       <line id="xh" y1="${M.t}" y2="${H - M.b}" stroke="var(--axis)" visibility="hidden"/>
       <circle id="xo" r="4.5" fill="var(--own)" stroke="var(--surface)" stroke-width="2" visibility="hidden"/>
       <rect x="${M.l}" y="0" width="${W - M.l - M.r}" height="${H}" fill="transparent" id="hit"/>
@@ -487,8 +551,8 @@ function renderChart(g) {
     else xo.setAttribute("visibility", "hidden");
     const lines = series.map(s => ({ s, v: s.pts[i].v })).filter(o => o.v != null).sort((a, b) => b.v - a.v);
     tip.innerHTML = `<b>${months[i].replace("-", ".")}</b>` + (lines.length ? lines.map(o =>
-      `<div class="r ${o.s.c.own ? "own" : ""}"><span>${esc(o.s.c.name)}</span><span>${fmtWon(o.v)}</span></div>`).join("")
-      : `<div class="r">거래 없음</div>`) + (own.pts[i].n ? `<div class="r note">${esc(own.c.name)} 이달 거래 ${own.pts[i].n}건</div>` : "");
+      `<div class="r ${o.s.c.own ? "own" : ""}"><span>${esc(o.s.c.name)}</span><span>${fmtWon(o.v)} <span class="sub">${o.s.pts[i].n}건</span></span></div>`).join("")
+      : `<div class="r">거래 없음</div>`) + `<div class="r note">월 평균가격</div>`;
     tip.style.display = "block";
     const left = x(i) / scale, tw = tip.offsetWidth;
     tip.style.left = Math.min(Math.max(0, left + 12 + tw > pt.width ? left - tw - 12 : left + 12), pt.width - tw) + "px";
@@ -600,6 +664,7 @@ function renderHistory() {
     (!useDong || hist.dongs.has(dongOf(r) || "none")) &&
     (!hist.floors.size || bands.some(b => hist.floors.has(b.id) && r[3] >= b.from && r[3] <= b.to)));
   const valid = rows.filter(r => !r[5]).map(r => r[2]);
+  const rec = records(hist.key);
 
   // 버튼에 보일 선택 요약
   const dateLabels = years.flatMap(y => {
@@ -636,7 +701,7 @@ function renderHistory() {
       <td>${shortDate(r[0])}</td>
       ${sale ? `<td>${shortDate(r[7])}</td><td>${dongOf(r) ? esc(dongOf(r)) + "동" : '<span class="sub">-</span>'}</td>` : ""}
       <td>${r[3]}층</td>
-      <td class="price">${r[8] ? '<span class="tag">직거래</span>' : ""}${r[5] ? '<span class="tag warn">해제</span>' : ""} <span class="v">${fmtWon(r[2])}</span></td>
+      <td class="price">${r[8] ? '<span class="tag">직거래</span>' : ""}${r[5] ? '<span class="tag warn">해제</span>' : ""}${rec.has(r) ? recordTag : ""} <span class="v">${fmtWon(r[2])}</span></td>
     </tr>`).join("")}</tbody>`
     : `<tbody><tr><td class="empty">조건에 맞는 ${hist.kind} 거래가 없습니다.</td></tr></tbody>`;
 }
