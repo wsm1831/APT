@@ -8,6 +8,7 @@
     "keywords": ["이안센트럴"],
     "completed": "2021-09",
     "naver_complex_id": "",
+    "naver_query": "이안센트럴D(주상복합)",
     "compare": [
       {"name": "동대구역화성파크드림", "lawd_cd": "27140", "umd": "신암동", "keywords": ["동대구역화성파크드림"]},
       {"name": "더샵디어엘로", "lawd_cd": "27140", "umd": "신천동", "keywords": ["디어엘로"]},
