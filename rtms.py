@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 
 import pandas as pd
 import requests
@@ -44,9 +44,13 @@ class Complex:
 
     @property
     def naver_url(self) -> str:
+        # 단지 번호 대신 네이버 부동산에서 복사한 링크를 그대로 넣어도 된다.
+        if self.naver_complex_id.startswith("http"):
+            return self.naver_complex_id
         if self.naver_complex_id:
             return f"https://new.land.naver.com/complexes/{self.naver_complex_id}"
-        return f"https://m.land.naver.com/search/result/{self.region.split()[0]} {self.name}"
+        # 번호를 모를 때는 네이버 통합검색으로 보낸다. 검색 결과의 부동산 영역에서 매물을 볼 수 있다.
+        return "https://m.search.naver.com/search.naver?query=" + quote(f"{self.region.split()[0]} {self.name} 매물")
 
 
 def load_complexes(path: Path | str = Path(__file__).parent / "complexes.json") -> list[Complex]:
