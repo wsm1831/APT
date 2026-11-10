@@ -418,7 +418,9 @@ function render() {
   const sale = stats(own.key, "매매"), jeon = stats(own.key, "전세");
   const ratio = sale.recent && jeon.recent ? jeon.recent / sale.recent * 100 : null;
   const groupKeys = new Set(g.complexes.map(c => c.key));
-  const events = (DATA.events || []).filter(e => groupKeys.has(e.key)).slice(0, 15);
+  // 새로 신고된 거래는 최근 7일(오늘 포함) 안에 확인된 것만 보여 준다
+  const weekAgo = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10);
+  const events = (DATA.events || []).filter(e => groupKeys.has(e.key) && e.found >= weekAgo);
   const segBtns = (attr, items, cur) => items.map(([v, t]) => `<button ${attr}="${v}" aria-pressed="${cur === v}">${t}</button>`).join("");
 
   document.getElementById("view").innerHTML = `
@@ -455,12 +457,12 @@ function render() {
     </section>
 
     <section class="card">
-      <div class="card-head"><h2>새로 신고된 거래</h2></div>
+      <div class="card-head"><h2>새로 신고된 거래</h2><span class="sub">최근 7일</span></div>
       ${events.length ? `<ul class="events">${events.map(e => `
         <li><div><div class="t"><strong>${esc(e.name)}</strong><span class="tag">${e.kind}</span>${e.cancelled ? '<span class="tag warn">해제</span>' : ""}</div>
           <div class="meta"><span>계약 ${shortDate(e.date)}</span><span>${e.floor}층</span><span>${shortDate(e.found)} 확인</span></div></div>
           <div class="price">${fmtWon(e.price)}</div></li>`).join("")}</ul>`
-        : `<div class="empty">아직 없습니다. 매일 아침 수집할 때 새로 신고된 거래가 있으면 여기에 쌓입니다.</div>`}
+        : `<div class="empty">최근 7일 동안 새로 신고된 거래가 없습니다.</div>`}
     </section>`;
 
   bindHistButtons(document.querySelector(".summary-head"));
